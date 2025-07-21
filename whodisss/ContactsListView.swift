@@ -75,11 +75,12 @@ struct ContactsListView: View {
                                 ContactRowView(contactInfo: contactInfo)
                             }
                         }
+                        .listStyle(PlainListStyle())
+                        .edgesIgnoringSafeArea(.horizontal)
                     }
                 }
             }
         }
-        .navigationTitle("Whodiss")
         .task {
             if contactDataManager.authorizationStatus == .authorized {
                 await contactDataManager.loadContacts()

@@ -77,12 +77,6 @@ struct ContactDetailView: View {
                     Text(contactInfo.displayName)
                         .font(.title2)
                         .fontWeight(.semibold)
-                    
-                    if !contactInfo.hasImage {
-                        Text("No profile photo")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
                 }
             }
             
@@ -132,7 +126,6 @@ struct ContactDetailView: View {
             Spacer()
         }
         .padding()
-        .navigationTitle("Add Photo")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingImageSearch) {
             ImageSearchView(contactName: contactInfo.displayName) { image in

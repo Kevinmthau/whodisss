@@ -53,9 +53,11 @@ This is an Xcode project with standard iOS development workflow:
 
 ## Key Technical Notes
 
-- All contact operations are async/await and performed on @MainActor
-- Camera functionality requires physical device (not available in simulator)
+- ContactDataManager uses @MainActor but moves heavy contact enumeration to background thread via Task.detached
+- Camera functionality requires physical device (not available in simulator)  
 - Contacts access requires user permission and proper Info.plist configuration
+- Navigation bar customizations: Back button text globally hidden via UINavigationBarAppearance in WhodisssApp
+- List styling: Uses PlainListStyle() with edge-to-edge layout for clean appearance
 
 ### Google Images Integration
 - Uses WKWebView with WKScriptMessageHandler for JavaScript-to-Swift communication

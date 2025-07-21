@@ -69,26 +69,40 @@ class ContactDataManager: ObservableObject {
         ] as [CNKeyDescriptor]
         
         let request = CNContactFetchRequest(keysToFetch: keys)
+        let store = contactStore
         
-        do {
-            var allContacts: [ContactInfo] = []
-            var contactsWithoutImages: [ContactInfo] = []
-            
-            try contactStore.enumerateContacts(with: request) { contact, _ in
-                let hasImage = contact.imageDataAvailable && contact.imageData != nil
-                let contactInfo = ContactInfo(contact: contact, hasImage: hasImage)
+        // Move heavy work to background thread
+        let result = await Task.detached {
+            do {
+                var allContacts: [ContactInfo] = []
+                var contactsWithoutImages: [ContactInfo] = []
                 
-                allContacts.append(contactInfo)
-                
-                if !hasImage {
-                    contactsWithoutImages.append(contactInfo)
+                try store.enumerateContacts(with: request) { contact, _ in
+                    let hasImage = contact.imageDataAvailable && contact.imageData != nil
+                    let contactInfo = ContactInfo(contact: contact, hasImage: hasImage)
+                    
+                    allContacts.append(contactInfo)
+                    
+                    if !hasImage {
+                        contactsWithoutImages.append(contactInfo)
+                    }
                 }
+                
+                let sortedContacts = allContacts.sorted { $0.displayName < $1.displayName }
+                let sortedContactsWithoutImages = contactsWithoutImages.sorted { $0.displayName < $1.displayName }
+                
+                return (sortedContacts, sortedContactsWithoutImages, nil as Error?)
+                
+            } catch {
+                return ([], [], error)
             }
-            
-            self.contacts = allContacts.sorted { $0.displayName < $1.displayName }
-            self.contactsWithoutImages = contactsWithoutImages.sorted { $0.displayName < $1.displayName }
-            
-        } catch {
+        }.value
+        
+        // Update UI on main thread
+        self.contacts = result.0
+        self.contactsWithoutImages = result.1
+        
+        if let error = result.2 {
             print("Error fetching contacts: \(error)")
         }
         
