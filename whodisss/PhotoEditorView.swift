@@ -7,7 +7,6 @@ struct PhotoEditorView: View {
     
     @Environment(\.dismiss) private var dismiss
     @State private var croppedImage: UIImage?
-    @State private var showingCropEditor = false
     
     var body: some View {
         NavigationView {
@@ -42,11 +41,6 @@ struct PhotoEditorView: View {
                 }
                 .padding()
                 
-                Button("Edit Crop") {
-                    showingCropEditor = true
-                }
-                .buttonStyle(.bordered)
-                
                 Spacer()
                 
                 HStack(spacing: 20) {
@@ -66,11 +60,6 @@ struct PhotoEditorView: View {
             }
             .padding()
             .navigationBarHidden(true)
-        }
-        .sheet(isPresented: $showingCropEditor) {
-            ImageCropperView(image: originalImage) { cropped in
-                croppedImage = cropped
-            }
         }
         .onAppear {
             croppedImage = cropImageToSquare(originalImage)
