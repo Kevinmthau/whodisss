@@ -1,0 +1,74 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Whodiss is an iOS app built with SwiftUI that helps users add profile photos to their contacts. The app provides three methods for adding photos:
+1. Search Google Images via embedded web view
+2. Choose from photo library using PhotosPicker
+3. Take photos using device camera
+
+## Architecture
+
+### Core Components
+
+- **ContactDataManager**: Main data management class that handles Contacts framework integration, authorization, and CRUD operations
+- **ContactInfo**: Data model wrapping CNContact with computed properties for display and image handling
+- **ContactsListView**: Main list interface with filtering (all contacts vs missing photos only)
+- **ContactDetailView**: Individual contact management with photo source selection
+- **ImageSearchView**: Google Images integration using WKWebView with JavaScript interaction
+- **PhotoEditorView**: Basic crop functionality for profile photos
+
+### Data Flow
+
+1. App requests Contacts access via ContactDataManager
+2. Contacts loaded and filtered into those with/without profile images
+3. User selects contact → ContactDetailView → photo source selection
+4. **Photo Library**: PhotosPicker → PhotoEditorView (photoPickerItem reset to nil after processing)
+5. **Google Images**: JavaScript message handling → image download → PhotoEditorView
+6. **Camera**: CameraView → PhotoEditorView
+7. PhotoEditorView cropping → ContactDataManager.saveImageToContact → contacts refresh
+
+### Key Dependencies
+
+- **Contacts Framework**: Core contact management and authorization
+- **PhotosUI**: Photo library picker integration
+- **WebKit**: Google Images search via WKWebView
+- **UIKit Integration**: Camera picker and image processing
+
+## Development Commands
+
+This is an Xcode project with standard iOS development workflow:
+- Open `whodisss.xcodeproj` in Xcode
+- Build and run using Xcode's standard controls (Cmd+R)
+- No external package manager dependencies
+- Uses iOS Simulator or physical device for testing
+
+## Testing
+
+- Unit tests: `whodisssTests/whodisssTests.swift`
+- UI tests: `whodisssUITests/` directory
+- Run tests via Xcode Test Navigator or Cmd+U
+
+## Key Technical Notes
+
+- All contact operations are async/await and performed on @MainActor
+- Camera functionality requires physical device (not available in simulator)
+- Contacts access requires user permission and proper Info.plist configuration
+
+### Google Images Integration
+- Uses WKWebView with WKScriptMessageHandler for JavaScript-to-Swift communication
+- JavaScript automatically injected on page load to intercept all image clicks
+- JavaScript searches DOM for images in clicked elements and parent/child elements
+- Image download via URLSession before passing to PhotoEditorView
+
+### Photo Selection Fixes
+- PhotosPicker: Must reset `photoPickerItem = nil` after processing to allow repeat selections
+- Sheet presentation: Use `onChange(of: showingImageSearch)` to detect dismissal before showing PhotoEditorView
+- Use `pendingPhotoEditor` state and `DispatchQueue.main.asyncAfter` with 0.3s delay for proper sheet transitions
+
+### Image Processing
+- Automatic square cropping for profile photos in PhotoEditorView
+- cropImageToSquare() method handles center cropping to smallest dimension
+- Image compression at 0.8 quality before saving to contacts
