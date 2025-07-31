@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Whodiss is an iOS app built with SwiftUI that helps users add profile photos to their contacts. The app provides three methods for adding photos:
+Whodisss is an iOS app built with SwiftUI that helps users add profile photos to their contacts. The app provides three methods for adding photos:
 1. Search Google Images via embedded web view
 2. Choose from photo library using PhotosPicker
 3. Take photos using device camera
@@ -15,7 +15,7 @@ Whodiss is an iOS app built with SwiftUI that helps users add profile photos to 
 
 - **ContactDataManager**: Main data management class that handles Contacts framework integration, authorization, and CRUD operations
 - **ContactInfo**: Data model wrapping CNContact with computed properties for display and image handling
-- **ContactsListView**: Main list interface with filtering (all contacts vs missing photos only)
+- **ContactsListView**: Main list interface with filtering (all contacts vs missing photos only) and search functionality
 - **ContactDetailView**: Individual contact management with photo source selection
 - **ImageSearchView**: Google Images integration using WKWebView with JavaScript interaction
 - **PhotoEditorView**: Basic crop functionality for profile photos
@@ -47,8 +47,8 @@ This is an Xcode project with standard iOS development workflow:
 
 ## Testing
 
-- Unit tests: `whodisssTests/whodisssTests.swift`
-- UI tests: `whodisssUITests/` directory
+- Unit tests: `whodisssTests/whodisssTests.swift` (uses Swift Testing framework, not XCTest)
+- UI tests: `whodisssUITests/` directory (traditional XCTest)
 - Run tests via Xcode Test Navigator or Cmd+U
 
 ## Key Technical Notes
@@ -58,11 +58,13 @@ This is an Xcode project with standard iOS development workflow:
 - Contacts access requires user permission and proper Info.plist configuration
 - Navigation bar customizations: Back button text globally hidden via UINavigationBarAppearance in WhodisssApp
 - List styling: Uses PlainListStyle() with edge-to-edge layout for clean appearance
+- Search functionality: Custom TextField with scrollDismissesKeyboard(.immediately) for better UX
 
 ### Google Images Integration
 - Uses WKWebView with WKScriptMessageHandler for JavaScript-to-Swift communication
 - JavaScript automatically injected on page load to intercept all image clicks
 - JavaScript searches DOM for images in clicked elements and parent/child elements
+- Complex click handling that searches for both <img> tags and CSS background images
 - Image download via URLSession before passing to PhotoEditorView
 
 ### Photo Selection Fixes
@@ -74,3 +76,9 @@ This is an Xcode project with standard iOS development workflow:
 - Automatic square cropping for profile photos in PhotoEditorView
 - cropImageToSquare() method handles center cropping to smallest dimension
 - Image compression at 0.8 quality before saving to contacts
+
+### Build Configuration
+- Bundle ID: `com.mushpot.whodisss`
+- Deployment Target: iOS 18.5
+- Supports iPhone and iPad
+- Version: 1.0 (build 1)

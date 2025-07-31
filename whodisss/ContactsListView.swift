@@ -4,9 +4,18 @@ import Contacts
 struct ContactsListView: View {
     @StateObject private var contactDataManager = ContactDataManager()
     @State private var showOnlyMissingPhotos = true
+    @State private var searchText = ""
     
     var displayedContacts: [ContactInfo] {
-        showOnlyMissingPhotos ? contactDataManager.contactsWithoutImages : contactDataManager.contacts
+        let baseContacts = showOnlyMissingPhotos ? contactDataManager.contactsWithoutImages : contactDataManager.contacts
+        
+        if searchText.isEmpty {
+            return baseContacts
+        } else {
+            return baseContacts.filter { contact in
+                contact.displayName.localizedCaseInsensitiveContains(searchText)
+            }
+        }
     }
     
     var body: some View {
@@ -43,6 +52,21 @@ struct ContactsListView: View {
                     .pickerStyle(.segmented)
                     .padding()
                     
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                            .font(.system(size: 16))
+                        
+                        TextField("Search", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .padding(.bottom)
+                    
                     if contactDataManager.isLoading {
                         VStack {
                             ProgressView()
@@ -77,6 +101,7 @@ struct ContactsListView: View {
                         }
                         .listStyle(PlainListStyle())
                         .edgesIgnoringSafeArea(.horizontal)
+                        .scrollDismissesKeyboard(.immediately)
                     }
                 }
             }
