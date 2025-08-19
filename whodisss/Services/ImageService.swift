@@ -4,6 +4,7 @@ import UIKit
 protocol ImageServiceProtocol {
     func downloadImage(from url: URL) async throws -> UIImage
     func cropImageToSquare(_ image: UIImage) -> UIImage
+    func cropImageToSquare(_ image: UIImage, scale: CGFloat, offset: CGSize) -> UIImage
     func compressImage(_ image: UIImage, quality: CGFloat) -> Data?
 }
 
@@ -33,6 +34,47 @@ class ImageService: ImageServiceProtocol {
             scale: image.scale,
             orientation: image.imageOrientation
         )
+    }
+    
+    func cropImageToSquare(_ image: UIImage, scale: CGFloat, offset: CGSize) -> UIImage {
+        let cropSize: CGFloat = 240
+        let outputSize = CGSize(width: cropSize, height: cropSize)
+        
+        UIGraphicsBeginImageContextWithOptions(outputSize, false, image.scale)
+        defer { UIGraphicsEndImageContext() }
+        
+        guard let context = UIGraphicsGetCurrentContext() else { return image }
+        
+        context.translateBy(x: outputSize.width / 2, y: outputSize.height / 2)
+        
+        context.translateBy(x: offset.width, y: offset.height)
+        
+        context.scaleBy(x: scale, y: scale)
+        
+        let imageSize = image.size
+        let aspectRatio = imageSize.width / imageSize.height
+        
+        var drawWidth: CGFloat
+        var drawHeight: CGFloat
+        
+        if aspectRatio > 1 {
+            drawHeight = cropSize
+            drawWidth = cropSize * aspectRatio
+        } else {
+            drawWidth = cropSize
+            drawHeight = cropSize / aspectRatio
+        }
+        
+        let drawRect = CGRect(
+            x: -drawWidth / 2,
+            y: -drawHeight / 2,
+            width: drawWidth,
+            height: drawHeight
+        )
+        
+        image.draw(in: drawRect)
+        
+        return UIGraphicsGetImageFromCurrentImageContext() ?? image
     }
     
     func compressImage(_ image: UIImage, quality: CGFloat = 0.8) -> Data? {

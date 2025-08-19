@@ -22,25 +22,29 @@ struct PhotoEditorView: View {
             VStack(spacing: 20) {
                 PhotoEditorHeader()
                 
-                PhotoPreview(image: viewModel.croppedImage ?? originalImage)
-                    .padding()
+                PhotoCropView(
+                    image: originalImage,
+                    scale: $viewModel.scale,
+                    offset: $viewModel.offset
+                )
+                .padding()
                 
                 Spacer()
                 
                 PhotoEditorActions(
                     onCancel: { dismiss() },
                     onSave: {
-                        let imageToSave = viewModel.croppedImage ?? originalImage
-                        onSave(imageToSave)
-                        dismiss()
+                        Task {
+                            if let croppedImage = await viewModel.cropImage() {
+                                onSave(croppedImage)
+                                dismiss()
+                            }
+                        }
                     }
                 )
             }
             .padding()
             .navigationBarHidden(true)
-        }
-        .onAppear {
-            viewModel.cropImage()
         }
     }
 }
@@ -60,20 +64,80 @@ struct PhotoEditorHeader: View {
     }
 }
 
-struct PhotoPreview: View {
+struct PhotoCropView: View {
     let image: UIImage
+    @Binding var scale: CGFloat
+    @Binding var offset: CGSize
+    
+    @State private var lastScale: CGFloat = 1.0
+    @GestureState private var dragOffset: CGSize = .zero
+    
+    private let minScale: CGFloat = 1.0
+    private let maxScale: CGFloat = 5.0
+    private let frameSize: CGFloat = 280
+    private let cropSize: CGFloat = 240
+    
+    var combinedOffset: CGSize {
+        CGSize(
+            width: offset.width + dragOffset.width,
+            height: offset.height + dragOffset.height
+        )
+    }
     
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.gray.opacity(0.1))
-                .aspectRatio(1, contentMode: .fit)
+                .frame(width: frameSize, height: frameSize)
             
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .clipShape(Circle())
-                .frame(width: 200, height: 200)
+            ZStack {
+                Color.black.opacity(0.3)
+                    .frame(width: frameSize, height: frameSize)
+                
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: cropSize, height: cropSize)
+                
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: cropSize * scale, height: cropSize * scale)
+                    .scaleEffect(1.0)
+                    .offset(combinedOffset)
+                    .frame(width: cropSize, height: cropSize)
+                    .mask(
+                        Circle()
+                            .frame(width: cropSize, height: cropSize)
+                    )
+                
+                Circle()
+                    .stroke(Color.white, lineWidth: 2)
+                    .frame(width: cropSize, height: cropSize)
+            }
+            .frame(width: frameSize, height: frameSize)
+            .clipped()
+            .gesture(
+                SimultaneousGesture(
+                    MagnificationGesture()
+                        .onChanged { value in
+                            let delta = value / lastScale
+                            lastScale = value
+                            let newScale = scale * delta
+                            scale = min(max(newScale, minScale), maxScale)
+                        }
+                        .onEnded { _ in
+                            lastScale = 1.0
+                        },
+                    DragGesture()
+                        .updating($dragOffset) { value, state, _ in
+                            state = value.translation
+                        }
+                        .onEnded { value in
+                            offset.width += value.translation.width
+                            offset.height += value.translation.height
+                        }
+                )
+            )
         }
     }
 }
@@ -96,7 +160,8 @@ struct PhotoEditorActions: View {
 
 @MainActor
 class PhotoEditorViewModel: ObservableObject {
-    @Published var croppedImage: UIImage?
+    @Published var scale: CGFloat = 1.0
+    @Published var offset: CGSize = .zero
     
     private let originalImage: UIImage
     private let imageService: ImageServiceProtocol
@@ -106,8 +171,19 @@ class PhotoEditorViewModel: ObservableObject {
         self.imageService = imageService
     }
     
-    func cropImage() {
-        croppedImage = imageService.cropImageToSquare(originalImage)
+    func cropImage() async -> UIImage? {
+        let scale = self.scale
+        let offset = self.offset
+        let originalImage = self.originalImage
+        let imageService = self.imageService
+        
+        return await Task.detached {
+            imageService.cropImageToSquare(
+                originalImage,
+                scale: scale,
+                offset: offset
+            )
+        }.value
     }
 }
 

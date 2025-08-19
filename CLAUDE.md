@@ -11,74 +11,114 @@ Whodisss is an iOS app built with SwiftUI that helps users add profile photos to
 
 ## Architecture
 
-### Core Components
+The project follows **MVVM (Model-View-ViewModel)** pattern with clear separation of concerns:
 
-- **ContactDataManager**: Main data management class that handles Contacts framework integration, authorization, and CRUD operations
-- **ContactInfo**: Data model wrapping CNContact with computed properties for display and image handling
-- **ContactsListView**: Main list interface with filtering (all contacts vs missing photos only) and search functionality
-- **ContactDetailView**: Individual contact management with photo source selection
-- **ImageSearchView**: Google Images integration using WKWebView with JavaScript interaction
-- **PhotoEditorView**: Basic crop functionality for profile photos
+### Core Structure
+- **Models/** - `ContactInfo` data model wrapping CNContact with computed properties
+- **Services/** - Protocol-based services for Contacts framework (`ContactStore`) and image operations (`ImageService`)
+- **ViewModels/** - State management and business logic (`ContactsViewModel`, `ContactDetailViewModel`, `ImageSearchViewModel`, `PhotoEditorViewModel`)
+- **Views/** - SwiftUI views organized by feature (Contacts/, Camera/, ImageSearch/, PhotoEditor/, Components/)
+
+See ARCHITECTURE.md for detailed component breakdown.
 
 ### Data Flow
+1. App requests Contacts access via `ContactsViewModel` → `ContactStore`
+2. Contacts fetched on background thread via `Task.detached`, UI updates via `@Published`
+3. Photo selection: ContactDetailView → ActiveSheet enum → single `.sheet(item:)` modifier
+4. Image processing: Download/Select → Interactive Crop (PhotoEditorView) → Compress (0.8 JPEG) → Save
 
-1. App requests Contacts access via ContactDataManager
-2. Contacts loaded and filtered into those with/without profile images
-3. User selects contact → ContactDetailView → photo source selection
-4. **Photo Library**: PhotosPicker → PhotoEditorView (photoPickerItem reset to nil after processing)
-5. **Google Images**: JavaScript message handling → image download → PhotoEditorView
-6. **Camera**: CameraView → PhotoEditorView
-7. PhotoEditorView cropping → ContactDataManager.saveImageToContact → contacts refresh
+### Critical Implementation Details
 
-### Key Dependencies
+#### Sheet Management
+- **MUST use single `.sheet(item:)` with `ActiveSheet` enum** - Multiple `.sheet` modifiers cause crashes
+- ActiveSheet enum states: `imageSearch`, `camera`, `photoEditor(UIImage)`
+- Delay sheet transitions with `DispatchQueue.main.asyncAfter(deadline: .now() + 0.5)`
+- Handle selectedImage state across sheet transitions
 
-- **Contacts Framework**: Core contact management and authorization
-- **PhotosUI**: Photo library picker integration
-- **WebKit**: Google Images search via WKWebView
-- **UIKit Integration**: Camera picker and image processing
+#### Photo Picker Reset
+- **Always set `photoPickerItem = nil` after processing** to allow repeat selections
+
+#### Google Images Integration
+- WKWebView with JavaScript injection on page load
+- JavaScript intercepts all clicks, searches for images in DOM
+- Downloads image via URLSession before presenting PhotoEditorView
+
+#### PhotoEditor Implementation
+- **Interactive Crop View**: 240px circular mask with white border
+- **Pinch-to-Zoom**: Scale range 1.0x to 5.0x using `MagnificationGesture`
+- **Pan/Drag**: Free movement with `DragGesture` and `@GestureState` for temporary offsets
+- **Simultaneous Gestures**: Combined zoom and pan using `SimultaneousGesture`
+- **Dual Crop Methods**: 
+  - Basic: `cropImageToSquare(_ image:)` for center crop
+  - Advanced: `cropImageToSquare(_ image:, scale:, offset:)` for interactive crop
+
+#### Image Processing Pipeline
+```swift
+// Interactive crop with transforms
+UIGraphicsBeginImageContextWithOptions(outputSize, false, image.scale)
+context.translateBy(x: outputSize.width / 2, y: outputSize.height / 2)
+context.translateBy(x: offset.width, y: offset.height)
+context.scaleBy(x: scale, y: scale)
+// Draw with aspect ratio preservation
+```
+
+#### Threading
+- `@MainActor` on ViewModels for UI safety
+- Contact enumeration uses `Task.detached` for background processing
+- Image crop operations run async with `Task.detached` to prevent UI blocking
 
 ## Development Commands
 
-This is an Xcode project with standard iOS development workflow:
-- Open `whodisss.xcodeproj` in Xcode
-- Build and run using Xcode's standard controls (Cmd+R)
-- No external package manager dependencies
-- Uses iOS Simulator or physical device for testing
+### Build & Run
+```bash
+# Build for simulator
+xcodebuild -project whodisss.xcodeproj -scheme whodisss -destination 'generic/platform=iOS Simulator' build
 
-## Testing
+# Build for physical device (replace with your device name)
+xcodebuild -project whodisss.xcodeproj -scheme whodisss -destination 'platform=iOS,name=iPhone 16 Pro' build
 
-- Unit tests: `whodisssTests/whodisssTests.swift` (uses Swift Testing framework, not XCTest)
-- UI tests: `whodisssUITests/` directory (traditional XCTest)
-- Run tests via Xcode Test Navigator or Cmd+U
+# Archive for TestFlight
+xcodebuild archive -project whodisss.xcodeproj -scheme whodisss -destination "generic/platform=iOS" -archivePath ~/Library/Developer/Xcode/Archives/whodisss.xcarchive
 
-## Key Technical Notes
+# Run tests
+xcodebuild test -project whodisss.xcodeproj -scheme whodisss -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+```
 
-- ContactDataManager uses @MainActor but moves heavy contact enumeration to background thread via Task.detached
-- Camera functionality requires physical device (not available in simulator)  
-- Contacts access requires user permission and proper Info.plist configuration
-- Navigation bar customizations: Back button text globally hidden via UINavigationBarAppearance in WhodisssApp
-- List styling: Uses PlainListStyle() with edge-to-edge layout for clean appearance
-- Search functionality: Custom TextField with scrollDismissesKeyboard(.immediately) for better UX
+### TestFlight Deployment
+1. Increment `CURRENT_PROJECT_VERSION` in project.pbxproj
+2. Archive and export with `method: app-store-connect`
+3. Upload happens automatically with `xcodebuild -exportArchive`
 
-### Google Images Integration
-- Uses WKWebView with WKScriptMessageHandler for JavaScript-to-Swift communication
-- JavaScript automatically injected on page load to intercept all image clicks
-- JavaScript searches DOM for images in clicked elements and parent/child elements
-- Complex click handling that searches for both <img> tags and CSS background images
-- Image download via URLSession before passing to PhotoEditorView
-
-### Photo Selection Fixes
-- PhotosPicker: Must reset `photoPickerItem = nil` after processing to allow repeat selections
-- Sheet presentation: Use `onChange(of: showingImageSearch)` to detect dismissal before showing PhotoEditorView
-- Use `pendingPhotoEditor` state and `DispatchQueue.main.asyncAfter` with 0.3s delay for proper sheet transitions
-
-### Image Processing
-- Automatic square cropping for profile photos in PhotoEditorView
-- cropImageToSquare() method handles center cropping to smallest dimension
-- Image compression at 0.8 quality before saving to contacts
-
-### Build Configuration
+## Build Configuration
 - Bundle ID: `com.mushpot.whodisss`
+- Team ID: `3JXY2MS2Y3`
 - Deployment Target: iOS 18.5
-- Supports iPhone and iPad
-- Version: 1.0 (build 1)
+- Version: 1.0 (Build 2)
+
+## Privacy Permissions Required
+Info.plist keys (auto-generated by Xcode):
+- `NSContactsUsageDescription` - Access contacts to add photos
+- `NSCameraUsageDescription` - Take photos for contacts
+- `NSPhotoLibraryUsageDescription` - Select photos from library
+
+## Known Issues & Solutions
+
+### Camera on Simulator
+Camera features don't work on simulator - test on physical device. Warnings about "BackTriple device" are normal and can be ignored.
+
+### Device Console Warnings
+Normal warnings when debugging on physical device:
+- "Failed to find a valid fallback video configuration" - Camera mode switching on iPhone Pro models
+- "Hang detected" messages - Brief pauses during debugging, not actual hangs
+- Web browser engine errors - Related to WKWebView, doesn't affect functionality
+
+### Pull-to-Refresh
+Simple manual refresh only - no background monitoring. Implementation:
+```swift
+.refreshable { await viewModel.refreshContacts() }
+```
+
+## Testing Notes
+- Unit tests use Swift Testing framework (not XCTest)
+- UI tests use traditional XCTest
+- Camera functionality requires physical device
