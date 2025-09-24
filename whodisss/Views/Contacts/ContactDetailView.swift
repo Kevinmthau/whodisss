@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import Contacts
+import ContactsUI
 
 enum ActiveSheet: Identifiable {
     case imageSearch
@@ -17,13 +18,14 @@ enum ActiveSheet: Identifiable {
 }
 
 struct ContactDetailView: View {
-    let contactInfo: ContactInfo
+    @State private var contactInfo: ContactInfo
     let viewModel: ContactsViewModel
     @StateObject private var detailViewModel: ContactDetailViewModel
     @State private var activeSheet: ActiveSheet?
-    
+    @State private var showContactEditor = false
+
     init(contactInfo: ContactInfo, viewModel: ContactsViewModel) {
-        self.contactInfo = contactInfo
+        self._contactInfo = State(initialValue: contactInfo)
         self.viewModel = viewModel
         self._detailViewModel = StateObject(wrappedValue: ContactDetailViewModel(
             contactInfo: contactInfo,
@@ -46,6 +48,14 @@ struct ContactDetailView: View {
         }
         .padding()
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showContactEditor = true }) {
+                    Image(systemName: "pencil")
+                        .foregroundColor(.blue)
+                }
+            }
+        }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .imageSearch:
@@ -94,6 +104,16 @@ struct ContactDetailView: View {
         .overlay {
             if detailViewModel.isSaving {
                 SavingOverlay()
+            }
+        }
+        .sheet(isPresented: $showContactEditor) {
+            ContactEditorWrapper(contact: contactInfo.contact, isPresented: $showContactEditor) { updatedContact in
+                if let updatedContact = updatedContact {
+                    // Update the local contact info with the edited contact
+                    contactInfo = ContactInfo(contact: updatedContact, hasImage: updatedContact.imageDataAvailable)
+                    // Don't refresh the entire contacts list to avoid navigation issues
+                    // The contact will be updated when returning to the list naturally
+                }
             }
         }
     }
@@ -187,7 +207,7 @@ struct SavingOverlay: View {
         ZStack {
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
-            
+
             VStack {
                 ProgressView()
                     .scaleEffect(1.2)
@@ -197,6 +217,60 @@ struct SavingOverlay: View {
             .padding()
             .background(Color.white)
             .cornerRadius(12)
+        }
+    }
+}
+
+struct ContactEditorWrapper: UIViewControllerRepresentable {
+    let contact: CNContact
+    @Binding var isPresented: Bool
+    let onDismiss: (CNContact?) -> Void
+
+    func makeUIViewController(context: Context) -> UINavigationController {
+        // Fetch contact with all required keys for CNContactViewController
+        let store = CNContactStore()
+        let keysToFetch = [CNContactViewController.descriptorForRequiredKeys()]
+
+        guard let fullContact = try? store.unifiedContact(withIdentifier: contact.identifier, keysToFetch: keysToFetch) else {
+            // If we can't fetch the full contact, create a basic view controller
+            let controller = CNContactViewController()
+            return UINavigationController(rootViewController: controller)
+        }
+
+        let controller = CNContactViewController(for: fullContact)
+        controller.allowsEditing = true
+        controller.allowsActions = false
+        controller.delegate = context.coordinator
+
+        // Add Cancel button
+        let cancelButton = UIBarButtonItem(barButtonSystemItem: .cancel, target: context.coordinator, action: #selector(Coordinator.cancelTapped))
+        controller.navigationItem.leftBarButtonItem = cancelButton
+
+        let navController = UINavigationController(rootViewController: controller)
+        return navController
+    }
+
+    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, CNContactViewControllerDelegate {
+        let parent: ContactEditorWrapper
+
+        init(_ parent: ContactEditorWrapper) {
+            self.parent = parent
+        }
+
+        func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
+            parent.onDismiss(contact)
+            parent.isPresented = false
+        }
+
+        @objc func cancelTapped() {
+            parent.onDismiss(nil)
+            parent.isPresented = false
         }
     }
 }
