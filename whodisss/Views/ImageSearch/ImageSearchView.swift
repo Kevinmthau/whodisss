@@ -3,6 +3,7 @@ import WebKit
 
 struct ImageSearchView: View {
     let contactName: String
+    let companyName: String?
     let onImageSelected: (UIImage) -> Void
     
     @Environment(\.dismiss) private var dismiss
@@ -12,7 +13,7 @@ struct ImageSearchView: View {
         NavigationView {
             ZStack {
                 GoogleImageSearchWebView(
-                    searchQuery: contactName,
+                    searchQuery: buildSearchQuery(),
                     viewModel: viewModel
                 )
                 
@@ -43,6 +44,13 @@ struct ImageSearchView: View {
             Text(viewModel.errorMessage ?? "An error occurred")
         }
     }
+
+    private func buildSearchQuery() -> String {
+        if let company = companyName, !company.isEmpty {
+            return "\(contactName) \(company)"
+        }
+        return contactName
+    }
 }
 
 struct GoogleImageSearchWebView: UIViewRepresentable {
@@ -71,5 +79,5 @@ struct GoogleImageSearchWebView: UIViewRepresentable {
 }
 
 #Preview {
-    ImageSearchView(contactName: "John Doe") { _ in }
+    ImageSearchView(contactName: "John Doe", companyName: "Apple Inc.") { _ in }
 }
