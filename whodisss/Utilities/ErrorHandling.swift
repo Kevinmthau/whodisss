@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 /// Protocol for ViewModels that need error handling capabilities
+@MainActor
 protocol ErrorHandling: ObservableObject {
     var errorMessage: String? { get set }
     var showError: Bool { get set }
