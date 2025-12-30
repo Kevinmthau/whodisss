@@ -4,10 +4,10 @@ import UIKit
 struct PhotoEditorView: View {
     let originalImage: UIImage
     let onSave: (UIImage) -> Void
-    
+
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: PhotoEditorViewModel
-    
+
     init(originalImage: UIImage, onSave: @escaping (UIImage) -> Void) {
         self.originalImage = originalImage
         self.onSave = onSave
@@ -16,21 +16,21 @@ struct PhotoEditorView: View {
             imageService: ImageService()
         ))
     }
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
                 PhotoEditorHeader()
-                
+
                 PhotoCropView(
                     image: originalImage,
                     scale: $viewModel.scale,
                     offset: $viewModel.offset
                 )
                 .padding()
-                
+
                 Spacer()
-                
+
                 PhotoEditorActions(
                     onCancel: { dismiss() },
                     onSave: {
@@ -55,7 +55,7 @@ struct PhotoEditorHeader: View {
             Text("Crop Photo")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text("Adjust the image to fit as a contact profile photo")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -68,36 +68,36 @@ struct PhotoCropView: View {
     let image: UIImage
     @Binding var scale: CGFloat
     @Binding var offset: CGSize
-    
+
     @State private var lastScale: CGFloat = 1.0
     @GestureState private var dragOffset: CGSize = .zero
-    
+
     private let minScale: CGFloat = 1.0
     private let maxScale: CGFloat = 5.0
     private let frameSize: CGFloat = 280
     private let cropSize: CGFloat = 240
-    
+
     var combinedOffset: CGSize {
         CGSize(
             width: offset.width + dragOffset.width,
             height: offset.height + dragOffset.height
         )
     }
-    
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.gray.opacity(0.1))
                 .frame(width: frameSize, height: frameSize)
-            
+
             ZStack {
                 Color.black.opacity(0.3)
                     .frame(width: frameSize, height: frameSize)
-                
+
                 Circle()
                     .fill(Color.white)
                     .frame(width: cropSize, height: cropSize)
-                
+
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -109,7 +109,7 @@ struct PhotoCropView: View {
                         Circle()
                             .frame(width: cropSize, height: cropSize)
                     )
-                
+
                 Circle()
                     .stroke(Color.white, lineWidth: 2)
                     .frame(width: cropSize, height: cropSize)
@@ -145,45 +145,16 @@ struct PhotoCropView: View {
 struct PhotoEditorActions: View {
     let onCancel: () -> Void
     let onSave: () -> Void
-    
+
     var body: some View {
         HStack(spacing: 20) {
             Button("Cancel", action: onCancel)
                 .buttonStyle(.bordered)
                 .foregroundColor(.red)
-            
+
             Button("Save Photo", action: onSave)
                 .buttonStyle(.borderedProminent)
         }
-    }
-}
-
-@MainActor
-class PhotoEditorViewModel: ObservableObject {
-    @Published var scale: CGFloat = 1.0
-    @Published var offset: CGSize = .zero
-    
-    private let originalImage: UIImage
-    private let imageService: ImageServiceProtocol
-    
-    init(originalImage: UIImage, imageService: ImageServiceProtocol) {
-        self.originalImage = originalImage
-        self.imageService = imageService
-    }
-    
-    func cropImage() async -> UIImage? {
-        let scale = self.scale
-        let offset = self.offset
-        let originalImage = self.originalImage
-        let imageService = self.imageService
-        
-        return await Task.detached {
-            imageService.cropImageToSquare(
-                originalImage,
-                scale: scale,
-                offset: offset
-            )
-        }.value
     }
 }
 
