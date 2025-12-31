@@ -51,7 +51,7 @@ class ContactDetailViewModel: ObservableObject, ErrorHandling {
         isSaving = true
         defer { isSaving = false }
 
-        let success = await contactsViewModel.saveImageToContact(
+        let success = await contactsViewModel.saveImageToContactWithoutReload(
             contactInfo.contact,
             image: editedImage
         )

@@ -102,6 +102,28 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
         }
     }
 
+    func saveImageToContactWithoutReload(_ contact: CNContact, image: UIImage) async -> Bool {
+        guard let imageData = imageService.compressImage(image, quality: 0.8) else {
+            handleError(nil, message: "Failed to compress image")
+            return false
+        }
+
+        guard let mutableContact = contact.mutableCopy() as? CNMutableContact else {
+            handleError(nil, message: "Failed to create mutable contact")
+            return false
+        }
+
+        mutableContact.imageData = imageData
+
+        do {
+            try contactStore.updateContact(mutableContact)
+            return true
+        } catch {
+            handleError(error, message: "Failed to save contact image")
+            return false
+        }
+    }
+
     func refreshContacts() async {
         guard authorizationStatus == .authorized else { return }
         guard !isRefreshing else { return }

@@ -6,7 +6,7 @@ struct ContactsList: View {
 
     var body: some View {
         List(contacts) { contactInfo in
-            NavigationLink(destination: ContactDetailView(contactInfo: contactInfo, viewModel: viewModel)) {
+            NavigationLink(destination: NativeContactDetailView(contactInfo: contactInfo, viewModel: viewModel)) {
                 ContactRowView(contactInfo: contactInfo)
             }
         }
