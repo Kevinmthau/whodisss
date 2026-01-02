@@ -49,52 +49,7 @@ extension ImageSearchViewModel: WKNavigationDelegate {
     }
 
     private func injectImageSelectionScript(into webView: WKWebView) {
-        let script = """
-            if (window.imageSelectionHandler) {
-                document.removeEventListener('click', window.imageSelectionHandler, true);
-            }
-
-            window.imageSelectionHandler = function(e) {
-                var element = e.target;
-                var imageUrl = null;
-
-                var currentElement = element;
-                while (currentElement && !imageUrl) {
-                    if (currentElement.tagName === 'IMG') {
-                        imageUrl = currentElement.src;
-                        break;
-                    }
-
-                    var style = window.getComputedStyle(currentElement);
-                    var backgroundImage = style.backgroundImage;
-                    if (backgroundImage && backgroundImage !== 'none') {
-                        var match = backgroundImage.match(/url\\("(.+?)"\\)/);
-                        if (match) {
-                            imageUrl = match[1];
-                            break;
-                        }
-                    }
-
-                    var imgChild = currentElement.querySelector('img');
-                    if (imgChild) {
-                        imageUrl = imgChild.src;
-                        break;
-                    }
-
-                    currentElement = currentElement.parentElement;
-                }
-
-                if (imageUrl) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.webkit.messageHandlers.imageSelected.postMessage(imageUrl);
-                }
-            };
-
-            document.addEventListener('click', window.imageSelectionHandler, true);
-        """
-
-        webView.evaluateJavaScript(script) { _, error in
+        webView.evaluateJavaScript(ImageSelectionScript.script) { _, error in
             if let error = error {
                 print("Failed to inject JavaScript: \(error)")
             }
@@ -104,7 +59,7 @@ extension ImageSearchViewModel: WKNavigationDelegate {
 
 extension ImageSearchViewModel: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        if message.name == "imageSelected", let imageUrl = message.body as? String {
+        if message.name == ImageSelectionScript.messageHandlerName, let imageUrl = message.body as? String {
             handleImageSelection(from: imageUrl)
         }
     }

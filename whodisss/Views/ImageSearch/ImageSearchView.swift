@@ -59,7 +59,7 @@ struct GoogleImageSearchWebView: UIViewRepresentable {
     
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.userContentController.add(viewModel, name: "imageSelected")
+        configuration.userContentController.add(viewModel, name: ImageSelectionScript.messageHandlerName)
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = viewModel

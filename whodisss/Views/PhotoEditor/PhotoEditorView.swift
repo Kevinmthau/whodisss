@@ -72,11 +72,6 @@ struct PhotoCropView: View {
     @State private var lastScale: CGFloat = 1.0
     @GestureState private var dragOffset: CGSize = .zero
 
-    private let minScale: CGFloat = 1.0
-    private let maxScale: CGFloat = 5.0
-    private let frameSize: CGFloat = 280
-    private let cropSize: CGFloat = 240
-
     var combinedOffset: CGSize {
         CGSize(
             width: offset.width + dragOffset.width,
@@ -88,33 +83,32 @@ struct PhotoCropView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.gray.opacity(0.1))
-                .frame(width: frameSize, height: frameSize)
+                .frame(width: CropConfiguration.frameSize, height: CropConfiguration.frameSize)
 
             ZStack {
                 Color.black.opacity(0.3)
-                    .frame(width: frameSize, height: frameSize)
+                    .frame(width: CropConfiguration.frameSize, height: CropConfiguration.frameSize)
 
                 Circle()
                     .fill(Color.white)
-                    .frame(width: cropSize, height: cropSize)
+                    .frame(width: CropConfiguration.cropSize, height: CropConfiguration.cropSize)
 
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: cropSize * scale, height: cropSize * scale)
-                    .scaleEffect(1.0)
+                    .frame(width: CropConfiguration.cropSize * scale, height: CropConfiguration.cropSize * scale)
                     .offset(combinedOffset)
-                    .frame(width: cropSize, height: cropSize)
+                    .frame(width: CropConfiguration.cropSize, height: CropConfiguration.cropSize)
                     .mask(
                         Circle()
-                            .frame(width: cropSize, height: cropSize)
+                            .frame(width: CropConfiguration.cropSize, height: CropConfiguration.cropSize)
                     )
 
                 Circle()
                     .stroke(Color.white, lineWidth: 2)
-                    .frame(width: cropSize, height: cropSize)
+                    .frame(width: CropConfiguration.cropSize, height: CropConfiguration.cropSize)
             }
-            .frame(width: frameSize, height: frameSize)
+            .frame(width: CropConfiguration.frameSize, height: CropConfiguration.frameSize)
             .clipped()
             .gesture(
                 SimultaneousGesture(
@@ -123,7 +117,7 @@ struct PhotoCropView: View {
                             let delta = value / lastScale
                             lastScale = value
                             let newScale = scale * delta
-                            scale = min(max(newScale, minScale), maxScale)
+                            scale = min(max(newScale, CropConfiguration.minScale), CropConfiguration.maxScale)
                         }
                         .onEnded { _ in
                             lastScale = 1.0

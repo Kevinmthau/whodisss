@@ -39,7 +39,7 @@ class ImageService: ImageServiceProtocol {
 
     /// Crops an image to a square using user-specified scale and offset from interactive editor
     func cropImageWithTransform(_ image: UIImage, scale: CGFloat, offset: CGSize) -> UIImage {
-        let cropSize: CGFloat = 240
+        let cropSize = CropConfiguration.cropSize
         let outputSize = CGSize(width: cropSize, height: cropSize)
 
         UIGraphicsBeginImageContextWithOptions(outputSize, false, image.scale)

@@ -6,13 +6,15 @@ struct FloatingPhotoButton: View {
     @Binding var photoPickerItem: PhotosPickerItem?
     let onTakePhoto: () -> Void
 
+    @State private var showPhotoPicker = false
+
     var body: some View {
         Menu {
             Button(action: onSearchGoogle) {
                 Label("Search Google Images", systemImage: "magnifyingglass")
             }
 
-            PhotosPicker(selection: $photoPickerItem, matching: .images) {
+            Button(action: { showPhotoPicker = true }) {
                 Label("Choose from Library", systemImage: "photo.on.rectangle")
             }
 
@@ -28,6 +30,7 @@ struct FloatingPhotoButton: View {
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
         }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $photoPickerItem, matching: .images)
     }
 }
 
