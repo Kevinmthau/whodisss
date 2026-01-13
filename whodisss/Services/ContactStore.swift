@@ -20,7 +20,8 @@ class ContactStore: ContactStoreProtocol {
         CNContactFamilyNameKey,
         CNContactOrganizationNameKey,
         CNContactImageDataKey,
-        CNContactImageDataAvailableKey
+        CNContactImageDataAvailableKey,
+        CNContactPostalAddressesKey
     ] as [CNKeyDescriptor]
     
     func requestAccess() async throws -> Bool {

@@ -4,6 +4,7 @@ import WebKit
 struct ImageSearchView: View {
     let contactName: String
     let companyName: String?
+    let location: String?
     let onImageSelected: (UIImage) -> Void
     
     @Environment(\.dismiss) private var dismiss
@@ -46,10 +47,14 @@ struct ImageSearchView: View {
     }
 
     private func buildSearchQuery() -> String {
+        var parts = [contactName]
         if let company = companyName, !company.isEmpty {
-            return "\(contactName) \(company)"
+            parts.append(company)
         }
-        return contactName
+        if let loc = location, !loc.isEmpty {
+            parts.append(loc)
+        }
+        return parts.joined(separator: " ")
     }
 }
 
@@ -79,5 +84,5 @@ struct GoogleImageSearchWebView: UIViewRepresentable {
 }
 
 #Preview {
-    ImageSearchView(contactName: "John Doe", companyName: "Apple Inc.") { _ in }
+    ImageSearchView(contactName: "John Doe", companyName: "Apple Inc.", location: "Cupertino, CA") { _ in }
 }

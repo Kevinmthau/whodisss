@@ -42,6 +42,7 @@ See ARCHITECTURE.md for detailed component breakdown.
 - WKWebView with JavaScript injection on page load
 - JavaScript intercepts all clicks, searches for images in DOM
 - Downloads image via URLSession before presenting PhotoEditorView
+- Search query includes contact name, company, and location (city/state) when available
 
 #### PhotoEditor Implementation
 - **Interactive Crop View**: 240px circular mask with white border

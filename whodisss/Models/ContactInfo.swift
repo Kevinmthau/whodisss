@@ -29,6 +29,20 @@ struct ContactInfo: Identifiable {
         let initials = components.prefix(2).compactMap { $0.first?.uppercased() }.joined()
         return initials.isEmpty ? "?" : initials
     }
+
+    var locationString: String? {
+        guard let address = contact.postalAddresses.first?.value else { return nil }
+        let city = address.city
+        let state = address.state
+        if !city.isEmpty && !state.isEmpty {
+            return "\(city), \(state)"
+        } else if !city.isEmpty {
+            return city
+        } else if !state.isEmpty {
+            return state
+        }
+        return nil
+    }
 }
 
 extension ContactInfo {

@@ -57,6 +57,7 @@ struct NativeContactDetailView: View {
                 ImageSearchView(
                     contactName: contactInfo.displayName,
                     companyName: contactInfo.contact.organizationName.isEmpty ? nil : contactInfo.contact.organizationName,
+                    location: contactInfo.locationString,
                     onImageSelected: { image in
                         detailViewModel.handleImageSearchSelection(image)
                         sheetCoordinator.transitionTo(.photoEditor)
