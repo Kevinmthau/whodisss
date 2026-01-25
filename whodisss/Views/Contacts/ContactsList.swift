@@ -13,6 +13,7 @@ struct ContactsList: View {
         .listStyle(PlainListStyle())
         .edgesIgnoringSafeArea(.horizontal)
         .scrollDismissesKeyboard(.immediately)
+        .contentMargins(.bottom, 60, for: .scrollContent)
         .refreshable {
             await viewModel.refreshContacts()
         }
@@ -20,7 +21,7 @@ struct ContactsList: View {
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         ContactsList(
             contacts: [.preview],
             viewModel: ContactsViewModel()

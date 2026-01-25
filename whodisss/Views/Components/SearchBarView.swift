@@ -11,11 +11,22 @@ struct SearchBarView: View {
 
             TextField("Search", text: $searchText)
                 .textFieldStyle(PlainTextFieldStyle())
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 16))
+                }
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .glassEffect()
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

@@ -28,16 +28,6 @@ struct ContactsListView: View {
                 }
             } else {
                 VStack(spacing: 0) {
-                    ContactFilterView(
-                        showOnlyMissingPhotos: $showOnlyMissingPhotos,
-                        missingCount: viewModel.contactsWithoutImages.count,
-                        totalCount: viewModel.contacts.count
-                    )
-
-                    SearchBarView(searchText: $searchText)
-                        .padding(.horizontal)
-                        .padding(.bottom)
-
                     if viewModel.isLoading {
                         LoadingView("Loading contacts...")
                     } else if displayedContacts.isEmpty {
@@ -56,6 +46,46 @@ struct ContactsListView: View {
                 }
             }
         }
+        .navigationTitle(showOnlyMissingPhotos ? "Missing Photos" : "Contacts")
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 12) {
+                Menu {
+                    Button {
+                        showOnlyMissingPhotos = true
+                    } label: {
+                        HStack {
+                            Text("Missing Photos (\(viewModel.contactsWithoutImages.count))")
+                            if showOnlyMissingPhotos {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    Button {
+                        showOnlyMissingPhotos = false
+                    } label: {
+                        HStack {
+                            Text("All Contacts (\(viewModel.contacts.count))")
+                            if !showOnlyMissingPhotos {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.primary)
+                        .frame(width: 44, height: 44)
+                        .background(.ultraThinMaterial)
+                        .glassEffect()
+                        .clipShape(Circle())
+                }
+
+                SearchBarView(searchText: $searchText)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial)
+        }
         .task {
             if viewModel.authorizationStatus == .authorized {
                 await viewModel.loadContacts()
@@ -70,7 +100,7 @@ struct ContactsListView: View {
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         ContactsListView()
     }
 }
