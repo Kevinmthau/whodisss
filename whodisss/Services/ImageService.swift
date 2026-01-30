@@ -9,8 +9,15 @@ protocol ImageServiceProtocol {
 }
 
 class ImageService: ImageServiceProtocol {
+    private lazy var urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 60
+        return URLSession(configuration: config)
+    }()
+
     func downloadImage(from url: URL) async throws -> UIImage {
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, _) = try await urlSession.data(from: url)
         guard let image = UIImage(data: data) else {
             throw ImageServiceError.invalidImageData
         }

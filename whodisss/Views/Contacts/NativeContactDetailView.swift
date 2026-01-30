@@ -83,8 +83,7 @@ struct NativeContactDetailView: View {
         }
         .onChange(of: detailViewModel.photoPickerItem) { _, _ in
             Task {
-                await detailViewModel.processPhotoPickerItem()
-                if detailViewModel.selectedImage != nil {
+                if let _ = await detailViewModel.processPhotoPickerItem() {
                     sheetCoordinator.present(.photoEditor)
                 }
             }

@@ -61,26 +61,64 @@ struct ImageSearchView: View {
 struct GoogleImageSearchWebView: UIViewRepresentable {
     let searchQuery: String
     let viewModel: ImageSearchViewModel
-    
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(viewModel: viewModel)
+    }
+
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.userContentController.add(viewModel, name: ImageSelectionScript.messageHandlerName)
-        
+        configuration.userContentController.add(
+            context.coordinator.weakHandler,
+            name: ImageSelectionScript.messageHandlerName
+        )
+
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = viewModel
-        
+
         let encodedQuery = searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let urlString = "https://www.google.com/search?tbm=isch&q=\(encodedQuery)"
-        
+
         if let url = URL(string: urlString) {
             let request = URLRequest(url: url)
             webView.load(request)
         }
-        
+
         return webView
     }
-    
+
     func updateUIView(_ uiView: WKWebView, context: Context) {}
+
+    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
+        uiView.configuration.userContentController.removeScriptMessageHandler(
+            forName: ImageSelectionScript.messageHandlerName
+        )
+    }
+
+    class Coordinator {
+        let weakHandler: WeakScriptMessageHandler
+
+        init(viewModel: ImageSearchViewModel) {
+            self.weakHandler = WeakScriptMessageHandler(delegate: viewModel)
+        }
+    }
+}
+
+/// Weak wrapper to prevent strong reference cycle between WKUserContentController and delegate
+class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var delegate: WKScriptMessageHandler?
+
+    init(delegate: WKScriptMessageHandler) {
+        self.delegate = delegate
+        super.init()
+    }
+
+    func userContentController(
+        _ userContentController: WKUserContentController,
+        didReceive message: WKScriptMessage
+    ) {
+        delegate?.userContentController(userContentController, didReceive: message)
+    }
 }
 
 #Preview {

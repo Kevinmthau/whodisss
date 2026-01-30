@@ -3,7 +3,7 @@ import Contacts
 import UIKit
 
 struct ContactInfo: Identifiable {
-    let id = UUID()
+    var id: String { contact.identifier }
     let contact: CNContact
     let hasImage: Bool
     
