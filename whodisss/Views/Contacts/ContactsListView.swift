@@ -75,16 +75,15 @@ struct ContactsListView: View {
                         .font(.system(size: 22))
                         .foregroundStyle(.primary)
                         .frame(width: 44, height: 44)
-                        .background(.ultraThinMaterial)
-                        .glassEffect()
                         .clipShape(Circle())
+                        .glassEffect(.regular)
+                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                 }
 
                 SearchBarView(searchText: $searchText)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
         }
         .task {
             if viewModel.authorizationStatus == .authorized {
