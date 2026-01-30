@@ -71,9 +71,9 @@ struct ContactsListView: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.system(size: 22))
-                        .foregroundStyle(.primary)
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .font(.system(size: 26, weight: .medium))
+                        .foregroundStyle(.black)
                         .frame(width: 44, height: 44)
                         .clipShape(Circle())
                         .glassEffect(.regular)
