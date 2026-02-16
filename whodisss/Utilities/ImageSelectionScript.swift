@@ -10,6 +10,31 @@ enum ImageSelectionScript {
 
         window.imageSelectionHandler = function(e) {
             var element = e.target;
+            var resultsContainer = document.querySelector('#islrg') || document.querySelector('.islrc');
+            var ignoreSelectors = [
+                'form[role="search"]',
+                'form[action*="/search"]',
+                'div[role="search"]',
+                '#searchform',
+                'input[type="text"]',
+                'input[type="search"]',
+                'textarea',
+                'button',
+                '[aria-label*="Clear"]',
+                '[aria-label*="Search"]',
+                '[aria-label*="clear"]',
+                '[aria-label*="search"]'
+            ];
+
+            for (var i = 0; i < ignoreSelectors.length; i++) {
+                if (element.closest && element.closest(ignoreSelectors[i])) {
+                    return;
+                }
+            }
+
+            if (resultsContainer && !resultsContainer.contains(element)) {
+                return;
+            }
             var imageUrl = null;
 
             var currentElement = element;

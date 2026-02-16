@@ -25,6 +25,9 @@ class ImageSearchViewModel: NSObject, ObservableObject, ErrorHandling {
             showErrorMessage("Invalid image URL")
             return
         }
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return
+        }
 
         Task {
             do {
