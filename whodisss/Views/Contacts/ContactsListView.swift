@@ -48,42 +48,44 @@ struct ContactsListView: View {
         }
         .navigationTitle(showOnlyMissingPhotos ? "Missing Photos" : "Contacts")
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
-                Menu {
-                    Button {
-                        showOnlyMissingPhotos = true
-                    } label: {
-                        HStack {
-                            Text("Missing Photos (\(viewModel.contactsWithoutImages.count))")
-                            if showOnlyMissingPhotos {
-                                Image(systemName: "checkmark")
+            if viewModel.authorizationStatus == .authorized {
+                HStack(spacing: 12) {
+                    Menu {
+                        Button {
+                            showOnlyMissingPhotos = true
+                        } label: {
+                            HStack {
+                                Text("Missing Photos (\(viewModel.contactsWithoutImages.count))")
+                                if showOnlyMissingPhotos {
+                                    Image(systemName: "checkmark")
+                                }
                             }
                         }
-                    }
-                    Button {
-                        showOnlyMissingPhotos = false
-                    } label: {
-                        HStack {
-                            Text("All Contacts (\(viewModel.contacts.count))")
-                            if !showOnlyMissingPhotos {
-                                Image(systemName: "checkmark")
+                        Button {
+                            showOnlyMissingPhotos = false
+                        } label: {
+                            HStack {
+                                Text("All Contacts (\(viewModel.contacts.count))")
+                                if !showOnlyMissingPhotos {
+                                    Image(systemName: "checkmark")
+                                }
                             }
                         }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease")
+                            .font(.system(size: 26, weight: .medium))
+                            .foregroundStyle(.black)
+                            .frame(width: 44, height: 44)
+                            .clipShape(Circle())
+                            .glassEffect(.regular)
+                            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                     }
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease")
-                        .font(.system(size: 26, weight: .medium))
-                        .foregroundStyle(.black)
-                        .frame(width: 44, height: 44)
-                        .clipShape(Circle())
-                        .glassEffect(.regular)
-                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-                }
 
-                SearchBarView(searchText: $searchText)
+                    SearchBarView(searchText: $searchText)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
         .task {
             if viewModel.authorizationStatus == .authorized {
