@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct FloatingPhotoButton: View {
     let onSearchGoogle: () -> Void
@@ -7,6 +8,10 @@ struct FloatingPhotoButton: View {
     let onTakePhoto: () -> Void
 
     @State private var showPhotoPicker = false
+
+    private var isCameraAvailable: Bool {
+        UIImagePickerController.isSourceTypeAvailable(.camera)
+    }
 
     var body: some View {
         Menu {
@@ -21,6 +26,7 @@ struct FloatingPhotoButton: View {
             Button(action: onTakePhoto) {
                 Label("Take Photo", systemImage: "camera")
             }
+            .disabled(!isCameraAvailable)
         } label: {
             Image(systemName: "camera.badge.ellipsis")
                 .font(.title2)

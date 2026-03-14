@@ -5,13 +5,14 @@ struct ContactsListView: View {
     @StateObject private var viewModel = ContactsViewModel()
     @State private var showOnlyMissingPhotos = true
     @State private var searchText = ""
+    @State private var showingFilterOptions = false
 
     private var shouldHideNavigationBar: Bool {
-        viewModel.authorizationStatus != .authorized
+        !viewModel.hasContactsAccess
     }
 
     private var shouldShowSearchBar: Bool {
-        viewModel.authorizationStatus == .authorized && !showOnlyMissingPhotos
+        viewModel.hasContactsAccess
     }
 
     var displayedContacts: [ContactInfo] {
@@ -28,7 +29,7 @@ struct ContactsListView: View {
 
     var body: some View {
         VStack {
-            if viewModel.authorizationStatus != .authorized {
+            if !viewModel.hasContactsAccess {
                 ContactsPermissionView {
                     Task {
                         await viewModel.requestContactsAccess()
@@ -57,29 +58,10 @@ struct ContactsListView: View {
         .navigationTitle(showOnlyMissingPhotos ? "Missing Photos" : "Contacts")
         .toolbar(shouldHideNavigationBar ? .hidden : .visible, for: .navigationBar)
         .safeAreaInset(edge: .bottom) {
-            if viewModel.authorizationStatus == .authorized {
+            if viewModel.hasContactsAccess {
                 HStack(spacing: 12) {
-                    Menu {
-                        Button {
-                            showOnlyMissingPhotos = true
-                        } label: {
-                            HStack {
-                                Text("Missing Photos (\(viewModel.contactsWithoutImages.count))")
-                                if showOnlyMissingPhotos {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                        Button {
-                            showOnlyMissingPhotos = false
-                        } label: {
-                            HStack {
-                                Text("All Contacts (\(viewModel.contacts.count))")
-                                if !showOnlyMissingPhotos {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
+                    Button {
+                        showingFilterOptions = true
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease")
                             .font(.system(size: 26, weight: .medium))
@@ -92,19 +74,29 @@ struct ContactsListView: View {
 
                     if shouldShowSearchBar {
                         SearchBarView(searchText: $searchText)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Spacer(minLength: 0)
                     }
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
             }
         }
-        .onChange(of: showOnlyMissingPhotos) { _, isShowingOnlyMissingPhotos in
-            if isShowingOnlyMissingPhotos {
-                searchText = ""
+        .confirmationDialog("Show Contacts", isPresented: $showingFilterOptions, titleVisibility: .visible) {
+            Button("Missing Photos (\(viewModel.contactsWithoutImages.count))") {
+                showOnlyMissingPhotos = true
             }
+
+            Button("All Contacts (\(viewModel.contacts.count))") {
+                showOnlyMissingPhotos = false
+            }
+
+            Button("Cancel", role: .cancel) { }
         }
         .task {
-            if viewModel.authorizationStatus == .authorized {
+            if viewModel.hasContactsAccess {
                 await viewModel.loadContacts()
             }
         }

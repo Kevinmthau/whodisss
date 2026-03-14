@@ -48,17 +48,21 @@ class ImageService: ImageServiceProtocol {
     func cropImageWithTransform(_ image: UIImage, scale: CGFloat, offset: CGSize) -> UIImage {
         let cropSize = CropConfiguration.cropSize
         let outputSize = CGSize(width: cropSize, height: cropSize)
+        let clampedScale = CropConfiguration.clampedScale(scale)
+        let clampedOffset = CropConfiguration.clampedOffset(offset, for: image.size, scale: clampedScale)
 
-        UIGraphicsBeginImageContextWithOptions(outputSize, false, image.scale)
+        UIGraphicsBeginImageContextWithOptions(outputSize, true, image.scale)
         defer { UIGraphicsEndImageContext() }
 
         guard let context = UIGraphicsGetCurrentContext() else { return image }
 
+        UIColor.white.setFill()
+        context.fill(CGRect(origin: .zero, size: outputSize))
         context.translateBy(x: outputSize.width / 2, y: outputSize.height / 2)
 
-        context.translateBy(x: offset.width, y: offset.height)
+        context.translateBy(x: clampedOffset.width, y: clampedOffset.height)
 
-        context.scaleBy(x: scale, y: scale)
+        context.scaleBy(x: clampedScale, y: clampedScale)
 
         let imageSize = image.size
         let aspectRatio = imageSize.width / imageSize.height

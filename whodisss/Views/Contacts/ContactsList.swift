@@ -13,7 +13,7 @@ struct ContactsList: View {
         .listStyle(PlainListStyle())
         .edgesIgnoringSafeArea(.horizontal)
         .scrollDismissesKeyboard(.immediately)
-        .contentMargins(.bottom, 60, for: .scrollContent)
+        .contentMargins(.bottom, 96, for: .scrollContent)
         .refreshable {
             await viewModel.refreshContacts()
         }

@@ -24,6 +24,10 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
         self.authorizationStatus = contactStore.authorizationStatus
     }
 
+    var hasContactsAccess: Bool {
+        authorizationStatus == .authorized || authorizationStatus == .limited
+    }
+
     func requestContactsAccess() async {
         isLoading = true
         defer { isLoading = false }
@@ -41,7 +45,7 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
     }
 
     func loadContacts() async {
-        guard authorizationStatus == .authorized else { return }
+        guard hasContactsAccess else { return }
 
         isLoading = true
         defer { isLoading = false }
@@ -65,7 +69,7 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
         var contactsWithoutImages: [ContactInfo] = []
 
         for contact in fetchedContacts {
-            let hasImage = contact.imageDataAvailable && contact.imageData != nil
+            let hasImage = ContactInfo.hasImage(for: contact)
             let contactInfo = ContactInfo(contact: contact, hasImage: hasImage)
 
             allContacts.append(contactInfo)
@@ -77,6 +81,28 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
 
         self.contacts = allContacts.sorted { $0.displayName < $1.displayName }
         self.contactsWithoutImages = contactsWithoutImages.sorted { $0.displayName < $1.displayName }
+    }
+
+    private func updateCachedContact(_ contact: CNContact) {
+        let updatedContact = ContactInfo(contact: contact, hasImage: ContactInfo.hasImage(for: contact))
+
+        if let index = contacts.firstIndex(where: { $0.id == updatedContact.id }) {
+            contacts[index] = updatedContact
+        } else {
+            contacts.append(updatedContact)
+        }
+
+        contacts.sort { $0.displayName < $1.displayName }
+
+        if updatedContact.hasImage {
+            contactsWithoutImages.removeAll { $0.id == updatedContact.id }
+        } else if let index = contactsWithoutImages.firstIndex(where: { $0.id == updatedContact.id }) {
+            contactsWithoutImages[index] = updatedContact
+            contactsWithoutImages.sort { $0.displayName < $1.displayName }
+        } else {
+            contactsWithoutImages.append(updatedContact)
+            contactsWithoutImages.sort { $0.displayName < $1.displayName }
+        }
     }
 
     func saveImageToContact(_ contact: CNContact, image: UIImage) async -> Bool {
@@ -94,6 +120,11 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
 
         do {
             try contactStore.updateContact(mutableContact)
+
+            if let updatedContact = mutableContact.copy() as? CNContact {
+                updateCachedContact(updatedContact)
+            }
+
             return true
         } catch {
             handleError(error, message: "Failed to save contact image")
@@ -102,7 +133,7 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
     }
 
     func refreshContacts() async {
-        guard authorizationStatus == .authorized else { return }
+        guard hasContactsAccess else { return }
         guard !isRefreshing else { return }
 
         isRefreshing = true

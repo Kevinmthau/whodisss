@@ -46,6 +46,12 @@ struct ContactInfo: Identifiable {
 }
 
 extension ContactInfo {
+    static func hasImage(for contact: CNContact) -> Bool {
+        let hasImageDataAvailable = contact.isKeyAvailable(CNContactImageDataAvailableKey) && contact.imageDataAvailable
+        let hasImageData = contact.isKeyAvailable(CNContactImageDataKey) && contact.imageData != nil
+        return hasImageDataAvailable || hasImageData
+    }
+
     static var preview: ContactInfo {
         ContactInfo(contact: CNContact(), hasImage: false)
     }

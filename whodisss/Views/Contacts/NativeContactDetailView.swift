@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import Contacts
+import UIKit
 
 struct NativeContactDetailView: View {
     @Environment(\.dismiss) private var dismiss
@@ -14,7 +15,6 @@ struct NativeContactDetailView: View {
         self._contactInfo = State(initialValue: contactInfo)
         self.viewModel = viewModel
         self._detailViewModel = StateObject(wrappedValue: ContactDetailViewModel(
-            contactInfo: contactInfo,
             contactsViewModel: viewModel
         ))
     }
@@ -27,7 +27,7 @@ struct NativeContactDetailView: View {
                 onContactUpdated: { updatedContact in
                     contactInfo = ContactInfo(
                         contact: updatedContact,
-                        hasImage: updatedContact.imageDataAvailable
+                        hasImage: ContactInfo.hasImage(for: updatedContact)
                     )
                 }
             )
@@ -41,7 +41,13 @@ struct NativeContactDetailView: View {
                     FloatingPhotoButton(
                         onSearchGoogle: { sheetCoordinator.present(.imageSearch) },
                         photoPickerItem: $detailViewModel.photoPickerItem,
-                        onTakePhoto: { sheetCoordinator.present(.camera) }
+                        onTakePhoto: {
+                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                sheetCoordinator.present(.camera)
+                            } else {
+                                detailViewModel.showErrorMessage("Camera is not available on this device")
+                            }
+                        }
                     )
                     .padding(.trailing, 20)
                     .padding(.bottom, 20)
@@ -64,18 +70,25 @@ struct NativeContactDetailView: View {
                     }
                 )
             case .camera:
-                CameraView(onImageCaptured: { image in
-                    detailViewModel.handleCameraCapture(image)
-                    sheetCoordinator.transitionTo(.photoEditor)
-                })
+                CameraView(
+                    onImageCaptured: { image in
+                        detailViewModel.handleCameraCapture(image)
+                        sheetCoordinator.transitionTo(.photoEditor)
+                    },
+                    onUnavailable: {
+                        detailViewModel.showErrorMessage("Camera is not available on this device")
+                        sheetCoordinator.dismiss()
+                    }
+                )
             case .photoEditor:
                 if let image = detailViewModel.selectedImage {
                     PhotoEditorView(originalImage: image) { editedImage in
                         Task {
-                            await detailViewModel.saveEditedImage(editedImage)
-                            sheetCoordinator.dismiss()
-                            // Increment version to refresh the native contact view with new photo
-                            contactVersion += 1
+                            if await detailViewModel.saveEditedImage(editedImage, for: contactInfo.contact) {
+                                sheetCoordinator.dismiss()
+                                // Increment version to refresh the native contact view with new photo
+                                contactVersion += 1
+                            }
                         }
                     }
                 }

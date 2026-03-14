@@ -30,18 +30,16 @@ class ContactStore: ContactStoreProtocol {
     
     func fetchContacts() async throws -> [CNContact] {
         let request = CNContactFetchRequest(keysToFetch: Self.keysToFetch)
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            var contacts: [CNContact] = []
-            
-            do {
-                try store.enumerateContacts(with: request) { contact, _ in
-                    contacts.append(contact)
-                }
-                continuation.resume(returning: contacts)
-            } catch {
-                continuation.resume(throwing: error)
+
+        var contacts: [CNContact] = []
+
+        do {
+            try store.enumerateContacts(with: request) { contact, _ in
+                contacts.append(contact)
             }
+            return contacts
+        } catch {
+            throw error
         }
     }
     

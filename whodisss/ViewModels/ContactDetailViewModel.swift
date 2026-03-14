@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import PhotosUI
+import Contacts
 
 @MainActor
 class ContactDetailViewModel: ObservableObject, ErrorHandling {
@@ -10,18 +11,10 @@ class ContactDetailViewModel: ObservableObject, ErrorHandling {
     @Published var errorMessage: String?
     @Published var showError = false
 
-    let contactInfo: ContactInfo
     private let contactsViewModel: ContactsViewModel
-    private let imageService: ImageServiceProtocol
 
-    init(
-        contactInfo: ContactInfo,
-        contactsViewModel: ContactsViewModel,
-        imageService: ImageServiceProtocol = ImageService()
-    ) {
-        self.contactInfo = contactInfo
+    init(contactsViewModel: ContactsViewModel) {
         self.contactsViewModel = contactsViewModel
-        self.imageService = imageService
     }
 
     func handleImageSearchSelection(_ image: UIImage) {
@@ -50,17 +43,19 @@ class ContactDetailViewModel: ObservableObject, ErrorHandling {
         return nil
     }
 
-    func saveEditedImage(_ editedImage: UIImage) async {
+    func saveEditedImage(_ editedImage: UIImage, for contact: CNContact) async -> Bool {
         isSaving = true
         defer { isSaving = false }
 
         let success = await contactsViewModel.saveImageToContact(
-            contactInfo.contact,
+            contact,
             image: editedImage
         )
 
         if success {
             selectedImage = nil
         }
+
+        return success
     }
 }

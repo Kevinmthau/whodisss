@@ -3,8 +3,16 @@ import UIKit
 
 struct CameraView: UIViewControllerRepresentable {
     let onImageCaptured: (UIImage) -> Void
+    let onUnavailable: () -> Void
     
     func makeUIViewController(context: Context) -> UIImagePickerController {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            DispatchQueue.main.async {
+                onUnavailable()
+            }
+            return UIImagePickerController()
+        }
+
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
         picker.sourceType = .camera

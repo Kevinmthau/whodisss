@@ -73,9 +73,13 @@ struct PhotoCropView: View {
     @GestureState private var dragOffset: CGSize = .zero
 
     var combinedOffset: CGSize {
-        CGSize(
-            width: offset.width + dragOffset.width,
-            height: offset.height + dragOffset.height
+        CropConfiguration.clampedOffset(
+            CGSize(
+                width: offset.width + dragOffset.width,
+                height: offset.height + dragOffset.height
+            ),
+            for: image.size,
+            scale: scale
         )
     }
 
@@ -116,8 +120,13 @@ struct PhotoCropView: View {
                         .onChanged { value in
                             let delta = value / lastScale
                             lastScale = value
-                            let newScale = scale * delta
-                            scale = min(max(newScale, CropConfiguration.minScale), CropConfiguration.maxScale)
+                            let newScale = CropConfiguration.clampedScale(scale * delta)
+                            scale = newScale
+                            offset = CropConfiguration.clampedOffset(
+                                offset,
+                                for: image.size,
+                                scale: newScale
+                            )
                         }
                         .onEnded { _ in
                             lastScale = 1.0
@@ -127,8 +136,14 @@ struct PhotoCropView: View {
                             state = value.translation
                         }
                         .onEnded { value in
-                            offset.width += value.translation.width
-                            offset.height += value.translation.height
+                            offset = CropConfiguration.clampedOffset(
+                                CGSize(
+                                    width: offset.width + value.translation.width,
+                                    height: offset.height + value.translation.height
+                                ),
+                                for: image.size,
+                                scale: scale
+                            )
                         }
                 )
             )
