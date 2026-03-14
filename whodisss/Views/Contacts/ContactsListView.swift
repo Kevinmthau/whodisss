@@ -6,6 +6,10 @@ struct ContactsListView: View {
     @State private var showOnlyMissingPhotos = true
     @State private var searchText = ""
 
+    private var shouldShowSearchBar: Bool {
+        viewModel.authorizationStatus == .authorized && !showOnlyMissingPhotos
+    }
+
     var displayedContacts: [ContactInfo] {
         let baseContacts = showOnlyMissingPhotos ? viewModel.contactsWithoutImages : viewModel.contacts
 
@@ -81,10 +85,17 @@ struct ContactsListView: View {
                             .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                     }
 
-                    SearchBarView(searchText: $searchText)
+                    if shouldShowSearchBar {
+                        SearchBarView(searchText: $searchText)
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
+            }
+        }
+        .onChange(of: showOnlyMissingPhotos) { _, isShowingOnlyMissingPhotos in
+            if isShowingOnlyMissingPhotos {
+                searchText = ""
             }
         }
         .task {
