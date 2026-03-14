@@ -6,6 +6,10 @@ struct ContactsListView: View {
     @State private var showOnlyMissingPhotos = true
     @State private var searchText = ""
 
+    private var shouldHideNavigationBar: Bool {
+        viewModel.authorizationStatus != .authorized
+    }
+
     private var shouldShowSearchBar: Bool {
         viewModel.authorizationStatus == .authorized && !showOnlyMissingPhotos
     }
@@ -51,6 +55,7 @@ struct ContactsListView: View {
             }
         }
         .navigationTitle(showOnlyMissingPhotos ? "Missing Photos" : "Contacts")
+        .toolbar(shouldHideNavigationBar ? .hidden : .visible, for: .navigationBar)
         .safeAreaInset(edge: .bottom) {
             if viewModel.authorizationStatus == .authorized {
                 HStack(spacing: 12) {
