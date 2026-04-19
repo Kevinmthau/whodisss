@@ -114,40 +114,36 @@ struct PhotoCropView: View {
             }
             .frame(width: CropConfiguration.frameSize, height: CropConfiguration.frameSize)
             .clipped()
-            .gesture(
-                SimultaneousGesture(
-                    MagnificationGesture()
-                        .onChanged { value in
-                            let delta = value / lastScale
-                            lastScale = value
-                            let newScale = CropConfiguration.clampedScale(scale * delta)
-                            scale = newScale
-                            offset = CropConfiguration.clampedOffset(
-                                offset,
-                                for: image.size,
-                                scale: newScale
-                            )
-                        }
-                        .onEnded { _ in
-                            lastScale = 1.0
-                        },
-                    DragGesture()
-                        .updating($dragOffset) { value, state, _ in
-                            state = value.translation
-                        }
-                        .onEnded { value in
-                            offset = CropConfiguration.clampedOffset(
-                                CGSize(
-                                    width: offset.width + value.translation.width,
-                                    height: offset.height + value.translation.height
-                                ),
-                                for: image.size,
-                                scale: scale
-                            )
-                        }
-                )
-            )
+            .gesture(SimultaneousGesture(magnificationGesture, dragGesture))
         }
+    }
+
+    private var magnificationGesture: some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                let delta = value / lastScale
+                lastScale = value
+                let newScale = CropConfiguration.clampedScale(scale * delta)
+                scale = newScale
+                offset = CropConfiguration.clampedOffset(offset, for: image.size, scale: newScale)
+            }
+            .onEnded { _ in
+                lastScale = 1.0
+            }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .updating($dragOffset) { value, state, _ in
+                state = value.translation
+            }
+            .onEnded { value in
+                let proposed = CGSize(
+                    width: offset.width + value.translation.width,
+                    height: offset.height + value.translation.height
+                )
+                offset = CropConfiguration.clampedOffset(proposed, for: image.size, scale: scale)
+            }
     }
 }
 
