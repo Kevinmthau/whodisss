@@ -8,12 +8,16 @@ struct PhotoEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: PhotoEditorViewModel
 
-    init(originalImage: UIImage, onSave: @escaping (UIImage) -> Void) {
+    init(
+        originalImage: UIImage,
+        imageService: ImageServiceProtocol = ImageService(),
+        onSave: @escaping (UIImage) -> Void
+    ) {
         self.originalImage = originalImage
         self.onSave = onSave
         self._viewModel = StateObject(wrappedValue: PhotoEditorViewModel(
             originalImage: originalImage,
-            imageService: ImageService()
+            imageService: imageService
         ))
     }
 
