@@ -106,11 +106,7 @@ struct NativeContactDetailView: View {
                 SavingOverlay()
             }
         }
-        .alert("Error", isPresented: $detailViewModel.showError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(detailViewModel.errorMessage ?? "An error occurred")
-        }
+        .errorAlert(for: detailViewModel)
     }
 }
 

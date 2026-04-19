@@ -39,11 +39,7 @@ struct ImageSearchView: View {
                 dismiss()
             }
         }
-        .alert("Error", isPresented: $viewModel.showError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(viewModel.errorMessage ?? "An error occurred")
-        }
+        .errorAlert(for: viewModel)
     }
 
     private func buildSearchQuery() -> String {
