@@ -56,3 +56,21 @@ extension ContactInfo {
         ContactInfo(contact: CNContact(), hasImage: false)
     }
 }
+
+extension Array where Element == ContactInfo {
+    func sortedByDisplayName() -> [ContactInfo] {
+        sorted { $0.displayName < $1.displayName }
+    }
+
+    mutating func sortByDisplayName() {
+        sort { $0.displayName < $1.displayName }
+    }
+
+    mutating func upsertByID(_ contact: ContactInfo) {
+        if let index = firstIndex(where: { $0.id == contact.id }) {
+            self[index] = contact
+        } else {
+            append(contact)
+        }
+    }
+}

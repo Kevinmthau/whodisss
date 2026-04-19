@@ -65,43 +65,25 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
     }
 
     private func processContacts(_ fetchedContacts: [CNContact]) {
-        var allContacts: [ContactInfo] = []
-        var contactsWithoutImages: [ContactInfo] = []
-
-        for contact in fetchedContacts {
-            let hasImage = ContactInfo.hasImage(for: contact)
-            let contactInfo = ContactInfo(contact: contact, hasImage: hasImage)
-
-            allContacts.append(contactInfo)
-
-            if !hasImage {
-                contactsWithoutImages.append(contactInfo)
-            }
+        let allContacts = fetchedContacts.map {
+            ContactInfo(contact: $0, hasImage: ContactInfo.hasImage(for: $0))
         }
 
-        self.contacts = allContacts.sorted { $0.displayName < $1.displayName }
-        self.contactsWithoutImages = contactsWithoutImages.sorted { $0.displayName < $1.displayName }
+        contacts = allContacts.sortedByDisplayName()
+        contactsWithoutImages = allContacts.filter { !$0.hasImage }.sortedByDisplayName()
     }
 
     private func updateCachedContact(_ contact: CNContact) {
-        let updatedContact = ContactInfo(contact: contact, hasImage: ContactInfo.hasImage(for: contact))
+        let updated = ContactInfo(contact: contact, hasImage: ContactInfo.hasImage(for: contact))
 
-        if let index = contacts.firstIndex(where: { $0.id == updatedContact.id }) {
-            contacts[index] = updatedContact
+        contacts.upsertByID(updated)
+        contacts.sortByDisplayName()
+
+        if updated.hasImage {
+            contactsWithoutImages.removeAll { $0.id == updated.id }
         } else {
-            contacts.append(updatedContact)
-        }
-
-        contacts.sort { $0.displayName < $1.displayName }
-
-        if updatedContact.hasImage {
-            contactsWithoutImages.removeAll { $0.id == updatedContact.id }
-        } else if let index = contactsWithoutImages.firstIndex(where: { $0.id == updatedContact.id }) {
-            contactsWithoutImages[index] = updatedContact
-            contactsWithoutImages.sort { $0.displayName < $1.displayName }
-        } else {
-            contactsWithoutImages.append(updatedContact)
-            contactsWithoutImages.sort { $0.displayName < $1.displayName }
+            contactsWithoutImages.upsertByID(updated)
+            contactsWithoutImages.sortByDisplayName()
         }
     }
 
