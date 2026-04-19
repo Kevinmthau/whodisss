@@ -58,41 +58,13 @@ struct NativeContactDetailView: View {
         .sheet(item: $sheetCoordinator.activeSheet, onDismiss: {
             sheetCoordinator.handleSheetDismissed()
         }) { sheet in
-            switch sheet {
-            case .imageSearch:
-                ImageSearchView(
-                    contactName: contactInfo.displayName,
-                    companyName: contactInfo.contact.organizationName.isEmpty ? nil : contactInfo.contact.organizationName,
-                    location: contactInfo.locationString,
-                    onImageSelected: { image in
-                        detailViewModel.handleImageSearchSelection(image)
-                        sheetCoordinator.transitionTo(.photoEditor)
-                    }
-                )
-            case .camera:
-                CameraView(
-                    onImageCaptured: { image in
-                        detailViewModel.handleCameraCapture(image)
-                        sheetCoordinator.transitionTo(.photoEditor)
-                    },
-                    onUnavailable: {
-                        detailViewModel.showErrorMessage("Camera is not available on this device")
-                        sheetCoordinator.dismiss()
-                    }
-                )
-            case .photoEditor:
-                if let image = detailViewModel.selectedImage {
-                    PhotoEditorView(originalImage: image) { editedImage in
-                        Task {
-                            if await detailViewModel.saveEditedImage(editedImage, for: contactInfo.contact) {
-                                sheetCoordinator.dismiss()
-                                // Increment version to refresh the native contact view with new photo
-                                contactVersion += 1
-                            }
-                        }
-                    }
-                }
-            }
+            ContactDetailSheetContent(
+                sheet: sheet,
+                contactInfo: contactInfo,
+                detailViewModel: detailViewModel,
+                sheetCoordinator: sheetCoordinator,
+                onPhotoSaved: { contactVersion += 1 }
+            )
         }
         .onChange(of: detailViewModel.photoPickerItem) { _, _ in
             Task {
