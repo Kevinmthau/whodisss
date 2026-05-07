@@ -58,6 +58,38 @@ struct whodisssTests {
         #expect(clampedOffset.width == 120)
         #expect(clampedOffset.height == 0)
     }
+
+    @Test func contactsListFilter_usesModeAndSearchTextWithoutResorting() {
+        let contactWithoutImage = ContactInfo(
+            contact: makeContact(givenName: "Taylor", familyName: "Swift"),
+            hasImage: false
+        )
+        let contactWithImage = ContactInfo(
+            contact: makeContact(givenName: "Olivia", familyName: "Rodrigo"),
+            hasImage: true
+        )
+        let allContacts = [contactWithImage, contactWithoutImage]
+        let contactsWithoutImages = [contactWithoutImage]
+
+        var filter = ContactsListFilter()
+
+        #expect(filter.displayedContacts(
+            allContacts: allContacts,
+            contactsWithoutImages: contactsWithoutImages
+        ).map(\.displayName) == ["Taylor Swift"])
+
+        filter.mode = .allContacts
+        #expect(filter.displayedContacts(
+            allContacts: allContacts,
+            contactsWithoutImages: contactsWithoutImages
+        ).map(\.displayName) == ["Olivia Rodrigo", "Taylor Swift"])
+
+        filter.searchText = "swift"
+        #expect(filter.displayedContacts(
+            allContacts: allContacts,
+            contactsWithoutImages: contactsWithoutImages
+        ).map(\.displayName) == ["Taylor Swift"])
+    }
 }
 
 private final class MockContactStore: ContactStoreProtocol {
@@ -105,10 +137,14 @@ private final class MockImageService: ImageServiceProtocol {
     }
 }
 
-private func makeContact(imageData: Data? = nil) -> CNContact {
+private func makeContact(
+    givenName: String = "Taylor",
+    familyName: String = "Swift",
+    imageData: Data? = nil
+) -> CNContact {
     let contact = CNMutableContact()
-    contact.givenName = "Taylor"
-    contact.familyName = "Swift"
+    contact.givenName = givenName
+    contact.familyName = familyName
     contact.imageData = imageData
     return contact.copy() as! CNContact
 }

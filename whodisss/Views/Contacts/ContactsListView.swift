@@ -1,10 +1,7 @@
 import SwiftUI
-import Contacts
 
 struct ContactsListView: View {
     @StateObject private var viewModel = ContactsViewModel()
-    @State private var showOnlyMissingPhotos = true
-    @State private var searchText = ""
     @State private var showingFilterOptions = false
 
     private var shouldHideNavigationBar: Bool {
@@ -15,47 +12,32 @@ struct ContactsListView: View {
         viewModel.hasContactsAccess
     }
 
-    var displayedContacts: [ContactInfo] {
-        let baseContacts = showOnlyMissingPhotos ? viewModel.contactsWithoutImages : viewModel.contacts
-
-        if searchText.isEmpty {
-            return baseContacts
-        } else {
-            return baseContacts.filter { contact in
-                contact.displayName.localizedCaseInsensitiveContains(searchText)
-            }
-        }
-    }
-
     var body: some View {
         VStack {
             if !viewModel.hasContactsAccess {
-                ContactsPermissionView {
-                    Task {
-                        await viewModel.requestContactsAccess()
-                    }
-                }
+                ContactsPermissionView(onGrantAccess: requestContactsAccess)
             } else {
                 VStack(spacing: 0) {
                     if viewModel.isLoading {
                         LoadingView("Loading contacts...")
-                    } else if displayedContacts.isEmpty {
+                    } else if viewModel.displayedContacts.isEmpty {
+                        let emptyState = viewModel.listEmptyState
                         EmptyStateView(
-                            icon: showOnlyMissingPhotos ? "checkmark.circle" : "person.crop.circle",
-                            title: showOnlyMissingPhotos ? "All contacts have photos!" : "No contacts found",
-                            message: showOnlyMissingPhotos ? "Great job! All your contacts now have profile photos." : nil,
-                            iconColor: showOnlyMissingPhotos ? .green : .gray
+                            icon: emptyState.icon,
+                            title: emptyState.title,
+                            message: emptyState.message,
+                            iconColor: emptyState.iconColor
                         )
                     } else {
                         ContactsList(
-                            contacts: displayedContacts,
+                            contacts: viewModel.displayedContacts,
                             viewModel: viewModel
                         )
                     }
                 }
             }
         }
-        .navigationTitle(showOnlyMissingPhotos ? "Missing Photos" : "Contacts")
+        .navigationTitle(viewModel.listNavigationTitle)
         .toolbar(shouldHideNavigationBar ? .hidden : .visible, for: .navigationBar)
         .safeAreaInset(edge: .bottom) {
             if viewModel.hasContactsAccess {
@@ -73,7 +55,7 @@ struct ContactsListView: View {
                     }
 
                     if shouldShowSearchBar {
-                        SearchBarView(searchText: $searchText)
+                        SearchBarView(searchText: $viewModel.listFilter.searchText)
                             .frame(maxWidth: .infinity)
                     } else {
                         Spacer(minLength: 0)
@@ -86,21 +68,31 @@ struct ContactsListView: View {
         }
         .confirmationDialog("Show Contacts", isPresented: $showingFilterOptions, titleVisibility: .visible) {
             Button("Missing Photos (\(viewModel.contactsWithoutImages.count))") {
-                showOnlyMissingPhotos = true
+                viewModel.showMissingPhotoContacts()
             }
 
             Button("All Contacts (\(viewModel.contacts.count))") {
-                showOnlyMissingPhotos = false
+                viewModel.showAllContacts()
             }
 
             Button("Cancel", role: .cancel) { }
         }
         .task {
-            if viewModel.hasContactsAccess {
-                await viewModel.loadContacts()
-            }
+            await loadContactsIfNeeded()
         }
         .errorAlert(for: viewModel)
+    }
+
+    private func requestContactsAccess() {
+        Task {
+            await viewModel.requestContactsAccess()
+        }
+    }
+
+    private func loadContactsIfNeeded() async {
+        guard viewModel.hasContactsAccess else { return }
+
+        await viewModel.loadContacts()
     }
 }
 

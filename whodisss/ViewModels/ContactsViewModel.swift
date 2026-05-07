@@ -11,6 +11,7 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
     @Published var authorizationStatus: CNAuthorizationStatus = .notDetermined
     @Published var errorMessage: String?
     @Published var showError = false
+    @Published var listFilter = ContactsListFilter()
 
     private let contactStore: ContactStoreProtocol
     private let imageService: ImageServiceProtocol
@@ -26,6 +27,29 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
 
     var hasContactsAccess: Bool {
         authorizationStatus == .authorized || authorizationStatus == .limited
+    }
+
+    var displayedContacts: [ContactInfo] {
+        listFilter.displayedContacts(
+            allContacts: contacts,
+            contactsWithoutImages: contactsWithoutImages
+        )
+    }
+
+    var listNavigationTitle: String {
+        listFilter.mode.navigationTitle
+    }
+
+    var listEmptyState: ContactsListEmptyState {
+        listFilter.mode.emptyState
+    }
+
+    func showMissingPhotoContacts() {
+        listFilter.mode = .missingPhotos
+    }
+
+    func showAllContacts() {
+        listFilter.mode = .allContacts
     }
 
     func requestContactsAccess() async {
