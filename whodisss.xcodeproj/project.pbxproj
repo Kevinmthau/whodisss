@@ -404,6 +404,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Whodisss;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Whodisss needs access to your camera to take photos for your contacts' profile pictures.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Whodiss needs access to your contacts to help you add profile photos to contacts that don't have them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Whodisss needs access to your photo library to select photos for your contacts' profile pictures.";
@@ -437,6 +438,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Whodisss;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Whodisss needs access to your camera to take photos for your contacts' profile pictures.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Whodiss needs access to your contacts to help you add profile photos to contacts that don't have them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Whodisss needs access to your photo library to select photos for your contacts' profile pictures.";
