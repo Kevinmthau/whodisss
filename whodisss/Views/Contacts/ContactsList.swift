@@ -3,6 +3,7 @@ import SwiftUI
 struct ContactsList: View {
     let contacts: [ContactInfo]
     let viewModel: ContactsViewModel
+    @Binding var scrollPositionID: String?
 
     var body: some View {
         List(contacts) { contactInfo in
@@ -13,6 +14,7 @@ struct ContactsList: View {
         .listStyle(PlainListStyle())
         .edgesIgnoringSafeArea(.horizontal)
         .scrollDismissesKeyboard(.immediately)
+        .scrollPosition(id: $scrollPositionID)
         .contentMargins(.bottom, 96, for: .scrollContent)
         .refreshable {
             await viewModel.refreshContacts()
@@ -24,7 +26,8 @@ struct ContactsList: View {
     NavigationStack {
         ContactsList(
             contacts: [.preview],
-            viewModel: ContactsViewModel()
+            viewModel: ContactsViewModel(),
+            scrollPositionID: .constant(nil)
         )
     }
 }

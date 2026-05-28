@@ -12,6 +12,8 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
     @Published var errorMessage: String?
     @Published var showError = false
     @Published var listFilter = ContactsListFilter()
+    @Published var listScrollPositionID: String?
+    private(set) var hasLoadedContacts = false
 
     private let contactStore: ContactStoreProtocol
     private let imageService: ImageServiceProtocol
@@ -95,6 +97,7 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
 
         contacts = allContacts.sortedByDisplayName()
         contactsWithoutImages = allContacts.filter { !$0.hasImage }.sortedByDisplayName()
+        hasLoadedContacts = true
     }
 
     private func updateCachedContact(_ contact: CNContact) {
@@ -111,6 +114,31 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
         }
     }
 
+    private func listScrollAnchorAfterSavingContact(withID contactID: String) -> String? {
+        let visibleContacts = displayedContacts
+
+        switch listFilter.mode {
+        case .allContacts:
+            return visibleContacts.contains { $0.id == contactID } ? contactID : listScrollPositionID
+        case .missingPhotos:
+            guard let savedIndex = visibleContacts.firstIndex(where: { $0.id == contactID }) else {
+                return listScrollPositionID
+            }
+
+            let nextIndex = visibleContacts.index(after: savedIndex)
+            if nextIndex < visibleContacts.endIndex {
+                return visibleContacts[nextIndex].id
+            }
+
+            if savedIndex > visibleContacts.startIndex {
+                let previousIndex = visibleContacts.index(before: savedIndex)
+                return visibleContacts[previousIndex].id
+            }
+
+            return nil
+        }
+    }
+
     func saveImageToContact(_ contact: CNContact, image: UIImage) async -> Bool {
         guard let imageData = imageService.compressImage(image, quality: 0.8) else {
             handleError(nil, message: "Failed to compress image")
@@ -123,6 +151,7 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
         }
 
         mutableContact.imageData = imageData
+        let listScrollAnchorAfterSave = listScrollAnchorAfterSavingContact(withID: contact.identifier)
 
         do {
             try contactStore.updateContact(mutableContact)
@@ -130,6 +159,8 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
             if let updatedContact = mutableContact.copy() as? CNContact {
                 updateCachedContact(updatedContact)
             }
+
+            listScrollPositionID = listScrollAnchorAfterSave
 
             return true
         } catch {

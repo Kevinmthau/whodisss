@@ -46,6 +46,93 @@ struct whodisssTests {
         #expect(viewModel.contacts.first?.hasImage == true)
     }
 
+    @MainActor
+    @Test func saveImageToContact_anchorsMissingPhotosListToNextContact() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let bob = makeContact(givenName: "Bob", familyName: "Baker")
+        let charlie = makeContact(givenName: "Charlie", familyName: "Clark")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice, bob, charlie]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        let didSave = await viewModel.saveImageToContact(bob, image: makeImage())
+
+        #expect(didSave)
+        #expect(viewModel.listScrollPositionID == charlie.identifier)
+        #expect(viewModel.contactsWithoutImages.map(\.id) == [alice.identifier, charlie.identifier])
+    }
+
+    @MainActor
+    @Test func saveImageToContact_anchorsMissingPhotosListToPreviousContactWhenSavingLast() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let bob = makeContact(givenName: "Bob", familyName: "Baker")
+        let charlie = makeContact(givenName: "Charlie", familyName: "Clark")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice, bob, charlie]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        let didSave = await viewModel.saveImageToContact(charlie, image: makeImage())
+
+        #expect(didSave)
+        #expect(viewModel.listScrollPositionID == bob.identifier)
+        #expect(viewModel.contactsWithoutImages.map(\.id) == [alice.identifier, bob.identifier])
+    }
+
+    @MainActor
+    @Test func saveImageToContact_clearsMissingPhotosAnchorWhenSavingOnlyContact() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        let didSave = await viewModel.saveImageToContact(alice, image: makeImage())
+
+        #expect(didSave)
+        #expect(viewModel.listScrollPositionID == nil)
+        #expect(viewModel.contactsWithoutImages.isEmpty)
+    }
+
+    @MainActor
+    @Test func saveImageToContact_anchorsAllContactsListToSavedContact() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let bob = makeContact(givenName: "Bob", familyName: "Baker")
+        let charlie = makeContact(givenName: "Charlie", familyName: "Clark")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice, bob, charlie]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        viewModel.showAllContacts()
+        let didSave = await viewModel.saveImageToContact(bob, image: makeImage())
+
+        #expect(didSave)
+        #expect(viewModel.listScrollPositionID == bob.identifier)
+        #expect(viewModel.contacts.map(\.id) == [alice.identifier, bob.identifier, charlie.identifier])
+    }
+
     @Test func cropConfiguration_clampsScaleAndOffsetToFilledCrop() {
         let clampedScale = CropConfiguration.clampedScale(0.25)
         let clampedOffset = CropConfiguration.clampedOffset(

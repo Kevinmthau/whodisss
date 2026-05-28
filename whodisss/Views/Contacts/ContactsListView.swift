@@ -31,7 +31,8 @@ struct ContactsListView: View {
                     } else {
                         ContactsList(
                             contacts: viewModel.displayedContacts,
-                            viewModel: viewModel
+                            viewModel: viewModel,
+                            scrollPositionID: $viewModel.listScrollPositionID
                         )
                     }
                 }
@@ -91,6 +92,7 @@ struct ContactsListView: View {
 
     private func loadContactsIfNeeded() async {
         guard viewModel.hasContactsAccess else { return }
+        guard !viewModel.hasLoadedContacts else { return }
 
         await viewModel.loadContacts()
     }
