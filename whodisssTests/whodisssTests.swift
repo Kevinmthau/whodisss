@@ -133,6 +133,112 @@ struct whodisssTests {
         #expect(viewModel.contacts.map(\.id) == [alice.identifier, bob.identifier, charlie.identifier])
     }
 
+    @MainActor
+    @Test func deleteContact_removesContactFromContacts() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let bob = makeContact(givenName: "Bob", familyName: "Baker")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice, bob]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        let didDelete = await viewModel.deleteContact(alice)
+
+        #expect(didDelete)
+        #expect(store.deleteCallCount == 1)
+        #expect(viewModel.contacts.map(\.id) == [bob.identifier])
+    }
+
+    @MainActor
+    @Test func deleteContact_removesContactFromContactsWithoutImages() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let bob = makeContact(givenName: "Bob", familyName: "Baker")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice, bob]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        let didDelete = await viewModel.deleteContact(alice)
+
+        #expect(didDelete)
+        #expect(viewModel.contactsWithoutImages.map(\.id) == [bob.identifier])
+    }
+
+    @MainActor
+    @Test func deleteContact_anchorsListScrollToNextVisibleContact() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let bob = makeContact(givenName: "Bob", familyName: "Baker")
+        let charlie = makeContact(givenName: "Charlie", familyName: "Clark")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice, bob, charlie]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        let didDelete = await viewModel.deleteContact(bob)
+
+        #expect(didDelete)
+        #expect(viewModel.listScrollPositionID == charlie.identifier)
+        #expect(viewModel.contactsWithoutImages.map(\.id) == [alice.identifier, charlie.identifier])
+    }
+
+    @MainActor
+    @Test func deleteContact_anchorsListScrollToPreviousVisibleContactWhenDeletingLast() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let bob = makeContact(givenName: "Bob", familyName: "Baker")
+        let charlie = makeContact(givenName: "Charlie", familyName: "Clark")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice, bob, charlie]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        let didDelete = await viewModel.deleteContact(charlie)
+
+        #expect(didDelete)
+        #expect(viewModel.listScrollPositionID == bob.identifier)
+        #expect(viewModel.contactsWithoutImages.map(\.id) == [alice.identifier, bob.identifier])
+    }
+
+    @MainActor
+    @Test func deleteContact_clearsListScrollAnchorWhenDeletingOnlyVisibleContact() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let store = MockContactStore(
+            authorizationStatus: .authorized,
+            contactsSequence: [[alice]]
+        )
+        let viewModel = ContactsViewModel(
+            contactStore: store,
+            imageService: MockImageService()
+        )
+
+        await viewModel.loadContacts()
+        let didDelete = await viewModel.deleteContact(alice)
+
+        #expect(didDelete)
+        #expect(viewModel.listScrollPositionID == nil)
+        #expect(viewModel.contacts.isEmpty)
+        #expect(viewModel.contactsWithoutImages.isEmpty)
+    }
+
     @Test func cropConfiguration_clampsScaleAndOffsetToFilledCrop() {
         let clampedScale = CropConfiguration.clampedScale(0.25)
         let clampedOffset = CropConfiguration.clampedOffset(
@@ -183,6 +289,7 @@ private final class MockContactStore: ContactStoreProtocol {
     var authorizationStatus: CNAuthorizationStatus
     private var contactsSequence: [[CNContact]]
     private(set) var updateCallCount = 0
+    private(set) var deleteCallCount = 0
 
     init(authorizationStatus: CNAuthorizationStatus, contactsSequence: [[CNContact]]) {
         self.authorizationStatus = authorizationStatus
@@ -203,6 +310,10 @@ private final class MockContactStore: ContactStoreProtocol {
 
     func updateContact(_ contact: CNMutableContact) throws {
         updateCallCount += 1
+    }
+
+    func deleteContact(_ contact: CNMutableContact) throws {
+        deleteCallCount += 1
     }
 }
 

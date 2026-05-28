@@ -5,6 +5,7 @@ protocol ContactStoreProtocol {
     func requestAccess() async throws -> Bool
     func fetchContacts() async throws -> [CNContact]
     func updateContact(_ contact: CNMutableContact) throws
+    func deleteContact(_ contact: CNMutableContact) throws
     var authorizationStatus: CNAuthorizationStatus { get }
 }
 
@@ -46,6 +47,12 @@ class ContactStore: ContactStoreProtocol {
     func updateContact(_ contact: CNMutableContact) throws {
         let request = CNSaveRequest()
         request.update(contact)
+        try store.execute(request)
+    }
+
+    func deleteContact(_ contact: CNMutableContact) throws {
+        let request = CNSaveRequest()
+        request.delete(contact)
         try store.execute(request)
     }
 }

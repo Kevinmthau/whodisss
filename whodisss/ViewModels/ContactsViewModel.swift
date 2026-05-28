@@ -139,6 +139,26 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
         }
     }
 
+    private func listScrollAnchorAfterDeletingContact(withID contactID: String) -> String? {
+        let visibleContacts = displayedContacts
+
+        guard let deletedIndex = visibleContacts.firstIndex(where: { $0.id == contactID }) else {
+            return listScrollPositionID
+        }
+
+        let nextIndex = visibleContacts.index(after: deletedIndex)
+        if nextIndex < visibleContacts.endIndex {
+            return visibleContacts[nextIndex].id
+        }
+
+        if deletedIndex > visibleContacts.startIndex {
+            let previousIndex = visibleContacts.index(before: deletedIndex)
+            return visibleContacts[previousIndex].id
+        }
+
+        return nil
+    }
+
     func saveImageToContact(_ contact: CNContact, image: UIImage) async -> Bool {
         guard let imageData = imageService.compressImage(image, quality: 0.8) else {
             handleError(nil, message: "Failed to compress image")
@@ -165,6 +185,28 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
             return true
         } catch {
             handleError(error, message: "Failed to save contact image")
+            return false
+        }
+    }
+
+    func deleteContact(_ contact: CNContact) async -> Bool {
+        guard let mutableContact = contact.mutableCopy() as? CNMutableContact else {
+            handleError(nil, message: "Failed to create mutable contact")
+            return false
+        }
+
+        let listScrollAnchorAfterDelete = listScrollAnchorAfterDeletingContact(withID: contact.identifier)
+
+        do {
+            try contactStore.deleteContact(mutableContact)
+
+            contacts.removeAll { $0.id == contact.identifier }
+            contactsWithoutImages.removeAll { $0.id == contact.identifier }
+            listScrollPositionID = listScrollAnchorAfterDelete
+
+            return true
+        } catch {
+            handleError(error, message: "Failed to delete contact")
             return false
         }
     }

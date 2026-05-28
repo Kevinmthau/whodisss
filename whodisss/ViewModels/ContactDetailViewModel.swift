@@ -8,6 +8,7 @@ class ContactDetailViewModel: ObservableObject, ErrorHandling {
     @Published var selectedImage: UIImage?
     @Published var photoPickerItem: PhotosPickerItem?
     @Published var isSaving = false
+    @Published var isDeleting = false
     @Published var errorMessage: String?
     @Published var showError = false
 
@@ -54,6 +55,20 @@ class ContactDetailViewModel: ObservableObject, ErrorHandling {
 
         if success {
             selectedImage = nil
+        }
+
+        return success
+    }
+
+    func deleteContact(_ contact: CNContact) async -> Bool {
+        isDeleting = true
+        defer { isDeleting = false }
+
+        let success = await contactsViewModel.deleteContact(contact)
+
+        if !success {
+            errorMessage = contactsViewModel.errorMessage ?? "Failed to delete contact"
+            showError = true
         }
 
         return success

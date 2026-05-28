@@ -7,6 +7,7 @@ struct NativeContactDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var contactInfo: ContactInfo
     @State private var contactVersion = 0
+    @State private var showingDeleteConfirmation = false
     let viewModel: ContactsViewModel
     @StateObject private var detailViewModel: ContactDetailViewModel
     @StateObject private var sheetCoordinator = SheetCoordinator()
@@ -24,6 +25,10 @@ struct NativeContactDetailView: View {
             ContactViewControllerRepresentable(
                 contact: contactInfo.contact,
                 onBack: { dismiss() },
+                onDeleteTapped: {
+                    guard !detailViewModel.isDeleting else { return }
+                    showingDeleteConfirmation = true
+                },
                 onContactUpdated: { updatedContact in
                     contactInfo = ContactInfo(
                         contact: updatedContact,
@@ -66,6 +71,19 @@ struct NativeContactDetailView: View {
                 onPhotoSaved: { contactVersion += 1 }
             )
         }
+        .confirmationDialog("Delete Contact?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete Contact", role: .destructive) {
+                Task {
+                    if await detailViewModel.deleteContact(contactInfo.contact) {
+                        dismiss()
+                    }
+                }
+            }
+
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This contact will be removed from your contacts.")
+        }
         .onChange(of: detailViewModel.photoPickerItem) { _, _ in
             Task {
                 if let _ = await detailViewModel.processPhotoPickerItem() {
@@ -74,8 +92,8 @@ struct NativeContactDetailView: View {
             }
         }
         .overlay {
-            if detailViewModel.isSaving {
-                SavingOverlay()
+            if detailViewModel.isSaving || detailViewModel.isDeleting {
+                SavingOverlay(detailViewModel.isDeleting ? "Deleting contact..." : "Saving photo...")
             }
         }
         .errorAlert(for: detailViewModel)
