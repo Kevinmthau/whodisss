@@ -25,10 +25,6 @@ struct NativeContactDetailView: View {
             ContactViewControllerRepresentable(
                 contact: contactInfo.contact,
                 onBack: { dismiss() },
-                onDeleteTapped: {
-                    guard !detailViewModel.isDeleting else { return }
-                    showingDeleteConfirmation = true
-                },
                 onContactUpdated: { updatedContact in
                     contactInfo = ContactInfo(
                         contact: updatedContact,
@@ -52,6 +48,10 @@ struct NativeContactDetailView: View {
                             } else {
                                 detailViewModel.showErrorMessage("Camera is not available on this device")
                             }
+                        },
+                        onDeleteContact: {
+                            guard !detailViewModel.isDeleting else { return }
+                            showingDeleteConfirmation = true
                         }
                     )
                     .padding(.trailing, 20)
