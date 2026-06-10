@@ -61,6 +61,7 @@ struct ContactsListFilter: Equatable {
 
         return baseContacts.filter { contact in
             contact.displayName.localizedCaseInsensitiveContains(searchText)
+                || contact.companyName?.localizedCaseInsensitiveContains(searchText) == true
         }
     }
 }

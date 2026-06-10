@@ -9,7 +9,9 @@ struct ContactViewControllerRepresentable: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UINavigationController {
         let store = CNContactStore()
-        let keysToFetch = [CNContactViewController.descriptorForRequiredKeys()]
+        // ContactInfo's computed properties need ContactStore.keysToFetch; the
+        // updated contact from this controller flows back into the cached list.
+        let keysToFetch = [CNContactViewController.descriptorForRequiredKeys()] + ContactStore.keysToFetch
 
         guard let fullContact = try? store.unifiedContact(
             withIdentifier: contact.identifier,

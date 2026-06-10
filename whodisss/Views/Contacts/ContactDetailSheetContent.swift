@@ -13,7 +13,7 @@ struct ContactDetailSheetContent: View {
         case .imageSearch:
             ImageSearchView(
                 contactName: contactInfo.displayName,
-                companyName: contactInfo.contact.organizationName.isEmpty ? nil : contactInfo.contact.organizationName,
+                companyName: contactInfo.companyName,
                 location: contactInfo.locationString,
                 onImageSelected: { image in
                     detailViewModel.handleImageSearchSelection(image)

@@ -20,6 +20,7 @@ class ContactStore: ContactStoreProtocol {
         CNContactGivenNameKey,
         CNContactFamilyNameKey,
         CNContactOrganizationNameKey,
+        CNContactEmailAddressesKey,
         CNContactImageDataKey,
         CNContactImageDataAvailableKey,
         CNContactPostalAddressesKey
