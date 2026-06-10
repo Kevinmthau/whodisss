@@ -279,9 +279,14 @@ struct whodisssTests {
             contact: makeContact(emails: ["taylor@Gmail.com", "taylor@initech.io"]),
             hasImage: false
         )
+        let gmailTrailingDot = ContactInfo(
+            contact: makeContact(emails: ["taylor@gmail.com."]),
+            hasImage: false
+        )
 
         #expect(gmailOnly.companyName == nil)
         #expect(gmailFirst.companyName == "Initech")
+        #expect(gmailTrailingDot.companyName == nil)
     }
 
     @Test func companyName_isNilWithoutOrganizationOrEmail() {

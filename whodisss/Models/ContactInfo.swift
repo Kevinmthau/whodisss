@@ -47,8 +47,8 @@ struct ContactInfo: Identifiable {
                 .lowercased()
             let parts = address.split(separator: "@", omittingEmptySubsequences: false)
             guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else { continue }
-            let domain = parts[1]
-            if Self.ignoredEmailDomains.contains(String(domain)) { continue }
+            let domain = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            if Self.ignoredEmailDomains.contains(domain) { continue }
             guard let prefix = domain.split(separator: ".").first, !prefix.isEmpty else { continue }
             return prefix.capitalized
         }
