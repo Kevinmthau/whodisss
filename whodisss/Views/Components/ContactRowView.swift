@@ -11,6 +11,13 @@ struct ContactRowView: View {
                 Text(contactInfo.displayName)
                     .font(.headline)
                     .lineLimit(1)
+
+                if let company = contactInfo.companyName, company != contactInfo.displayName {
+                    Text(company)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()

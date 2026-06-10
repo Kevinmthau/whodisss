@@ -30,6 +30,31 @@ struct ContactInfo: Identifiable {
         return initials.isEmpty ? "?" : initials
     }
 
+    var companyName: String? {
+        if !contact.organizationName.isEmpty {
+            return contact.organizationName
+        }
+        return companyFromEmailDomain
+    }
+
+    private static let ignoredEmailDomains: Set<String> = ["gmail.com"]
+
+    private var companyFromEmailDomain: String? {
+        guard contact.isKeyAvailable(CNContactEmailAddressesKey) else { return nil }
+        for email in contact.emailAddresses {
+            let address = (email.value as String)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            let parts = address.split(separator: "@", omittingEmptySubsequences: false)
+            guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else { continue }
+            let domain = parts[1]
+            if Self.ignoredEmailDomains.contains(String(domain)) { continue }
+            guard let prefix = domain.split(separator: ".").first, !prefix.isEmpty else { continue }
+            return prefix.capitalized
+        }
+        return nil
+    }
+
     var locationString: String? {
         guard let address = contact.postalAddresses.first?.value else { return nil }
         let city = address.city
@@ -53,7 +78,13 @@ extension ContactInfo {
     }
 
     static var preview: ContactInfo {
-        ContactInfo(contact: CNContact(), hasImage: false)
+        let contact = CNMutableContact()
+        contact.givenName = "Taylor"
+        contact.familyName = "Swift"
+        contact.emailAddresses = [
+            CNLabeledValue(label: CNLabelWork, value: "taylor@globex.com" as NSString)
+        ]
+        return ContactInfo(contact: contact.copy() as! CNContact, hasImage: false)
     }
 }
 

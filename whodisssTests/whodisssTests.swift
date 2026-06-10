@@ -252,6 +252,86 @@ struct whodisssTests {
         #expect(clampedOffset.height == 0)
     }
 
+    @Test func companyName_prefersOrganizationOverEmailDomain() {
+        let contact = ContactInfo(
+            contact: makeContact(organizationName: "Acme Corp", emails: ["taylor@globex.com"]),
+            hasImage: false
+        )
+
+        #expect(contact.companyName == "Acme Corp")
+    }
+
+    @Test func companyName_fallsBackToCapitalizedEmailDomainPrefix() {
+        let contact = ContactInfo(
+            contact: makeContact(emails: ["taylor@globex.co.uk"]),
+            hasImage: false
+        )
+
+        #expect(contact.companyName == "Globex")
+    }
+
+    @Test func companyName_skipsGmailAddresses() {
+        let gmailOnly = ContactInfo(
+            contact: makeContact(emails: ["taylor@gmail.com"]),
+            hasImage: false
+        )
+        let gmailFirst = ContactInfo(
+            contact: makeContact(emails: ["taylor@Gmail.com", "taylor@initech.io"]),
+            hasImage: false
+        )
+
+        #expect(gmailOnly.companyName == nil)
+        #expect(gmailFirst.companyName == "Initech")
+    }
+
+    @Test func companyName_isNilWithoutOrganizationOrEmail() {
+        let contact = ContactInfo(contact: makeContact(), hasImage: false)
+
+        #expect(contact.companyName == nil)
+    }
+
+    @Test func companyName_rejectsMalformedEmails() {
+        let doubleAt = ContactInfo(contact: makeContact(emails: ["a@@b.com"]), hasImage: false)
+        let emptyLocalPart = ContactInfo(contact: makeContact(emails: ["@acme.com"]), hasImage: false)
+        let noDomain = ContactInfo(contact: makeContact(emails: ["john@"]), hasImage: false)
+
+        #expect(doubleAt.companyName == nil)
+        #expect(emptyLocalPart.companyName == nil)
+        #expect(noDomain.companyName == nil)
+    }
+
+    @Test func companyName_trimsWhitespaceAroundEmail() {
+        let padded = ContactInfo(contact: makeContact(emails: [" taylor@globex.com "]), hasImage: false)
+
+        #expect(padded.companyName == "Globex")
+    }
+
+    @Test func contactsListFilter_matchesCompanyName() {
+        let acme = ContactInfo(
+            contact: makeContact(givenName: "Ada", familyName: "Lovelace", emails: ["ada@acme.com"]),
+            hasImage: false
+        )
+        let globex = ContactInfo(
+            contact: makeContact(givenName: "Bob", familyName: "Baker", organizationName: "Globex"),
+            hasImage: false
+        )
+
+        var filter = ContactsListFilter()
+        filter.mode = .allContacts
+
+        filter.searchText = "acme"
+        #expect(filter.displayedContacts(
+            allContacts: [acme, globex],
+            contactsWithoutImages: []
+        ).map(\.displayName) == ["Ada Lovelace"])
+
+        filter.searchText = "globex"
+        #expect(filter.displayedContacts(
+            allContacts: [acme, globex],
+            contactsWithoutImages: []
+        ).map(\.displayName) == ["Bob Baker"])
+    }
+
     @Test func contactsListFilter_usesModeAndSearchTextWithoutResorting() {
         let contactWithoutImage = ContactInfo(
             contact: makeContact(givenName: "Taylor", familyName: "Swift"),
@@ -338,11 +418,17 @@ private final class MockImageService: ImageServiceProtocol {
 private func makeContact(
     givenName: String = "Taylor",
     familyName: String = "Swift",
+    organizationName: String = "",
+    emails: [String] = [],
     imageData: Data? = nil
 ) -> CNContact {
     let contact = CNMutableContact()
     contact.givenName = givenName
     contact.familyName = familyName
+    contact.organizationName = organizationName
+    contact.emailAddresses = emails.map {
+        CNLabeledValue(label: CNLabelWork, value: $0 as NSString)
+    }
     contact.imageData = imageData
     return contact.copy() as! CNContact
 }
