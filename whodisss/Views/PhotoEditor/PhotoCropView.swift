@@ -60,7 +60,7 @@ struct PhotoCropView: View {
             .onChanged { value in
                 let delta = value / lastScale
                 lastScale = value
-                let newScale = CropConfiguration.clampedScale(scale * delta)
+                let newScale = CropConfiguration.clampedScale(scale * delta, for: image.size)
                 scale = newScale
                 offset = CropConfiguration.clampedOffset(offset, for: image.size, scale: newScale)
             }

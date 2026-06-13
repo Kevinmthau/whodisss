@@ -239,15 +239,39 @@ struct whodisssTests {
         #expect(viewModel.contactsWithoutImages.isEmpty)
     }
 
-    @Test func cropConfiguration_clampsScaleAndOffsetToFilledCrop() {
-        let clampedScale = CropConfiguration.clampedScale(0.25)
+    @Test func cropConfiguration_allowsShrinkingImageToFitCircle() {
+        let imageSize = CGSize(width: 1200, height: 600) // aspect ratio 2:1
+        let minScale = CropConfiguration.minScale(for: imageSize)
+
+        // Users must be able to zoom out past the "fill" point (scale 1.0).
+        #expect(minScale < 1.0)
+
+        // At the minimum scale the entire image fits within the circular crop, i.e. its
+        // rendered bounding box diagonal is no larger than the crop circle's diameter.
+        let rendered = CropConfiguration.renderedImageSize(for: imageSize, scale: minScale)
+        let diagonal = (rendered.width * rendered.width + rendered.height * rendered.height).squareRoot()
+        #expect(diagonal <= CropConfiguration.cropSize + 0.001)
+
+        // Requesting an even smaller scale clamps back up to the fit minimum.
+        #expect(CropConfiguration.clampedScale(0.1, for: imageSize) == minScale)
+
+        // Fully zoomed out the image is centered with no panning room.
+        let clampedOffset = CropConfiguration.clampedOffset(
+            CGSize(width: 500, height: 500),
+            for: imageSize,
+            scale: minScale
+        )
+        #expect(clampedOffset.width == 0)
+        #expect(clampedOffset.height == 0)
+    }
+
+    @Test func cropConfiguration_clampsOffsetToFilledCropWhenZoomedIn() {
         let clampedOffset = CropConfiguration.clampedOffset(
             CGSize(width: 500, height: 500),
             for: CGSize(width: 1200, height: 600),
-            scale: clampedScale
+            scale: 1.0
         )
 
-        #expect(clampedScale == CropConfiguration.minScale)
         #expect(clampedOffset.width == 120)
         #expect(clampedOffset.height == 0)
     }
