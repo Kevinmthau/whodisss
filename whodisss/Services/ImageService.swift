@@ -48,7 +48,7 @@ class ImageService: ImageServiceProtocol {
     func cropImageWithTransform(_ image: UIImage, scale: CGFloat, offset: CGSize) -> UIImage {
         let cropSize = CropConfiguration.cropSize
         let outputSize = CGSize(width: cropSize, height: cropSize)
-        let clampedScale = CropConfiguration.clampedScale(scale)
+        let clampedScale = CropConfiguration.clampedScale(scale, for: image.size)
         let clampedOffset = CropConfiguration.clampedOffset(offset, for: image.size, scale: clampedScale)
 
         UIGraphicsBeginImageContextWithOptions(outputSize, true, image.scale)
