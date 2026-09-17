@@ -7,7 +7,13 @@ struct ContactsList: View {
 
     var body: some View {
         List(contacts) { contactInfo in
-            NavigationLink(destination: NativeContactDetailView(contactInfo: contactInfo, viewModel: viewModel)) {
+            NavigationLink {
+                NativeContactDetailView(
+                    contactInfo: contactInfo,
+                    viewModel: viewModel,
+                    automaticallySearchImages: viewModel.listFilter.mode == .missingPhotos
+                )
+            } label: {
                 ContactRowView(contactInfo: contactInfo)
             }
         }

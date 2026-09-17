@@ -8,12 +8,18 @@ struct NativeContactDetailView: View {
     @State private var contactInfo: ContactInfo
     @State private var contactVersion = 0
     @State private var showingDeleteConfirmation = false
+    @State private var shouldStartImageSearch: Bool
     let viewModel: ContactsViewModel
     @StateObject private var detailViewModel: ContactDetailViewModel
     @StateObject private var sheetCoordinator = SheetCoordinator()
 
-    init(contactInfo: ContactInfo, viewModel: ContactsViewModel) {
+    init(
+        contactInfo: ContactInfo,
+        viewModel: ContactsViewModel,
+        automaticallySearchImages: Bool = false
+    ) {
         self._contactInfo = State(initialValue: contactInfo)
+        self._shouldStartImageSearch = State(initialValue: automaticallySearchImages)
         self.viewModel = viewModel
         self._detailViewModel = StateObject(wrappedValue: ContactDetailViewModel(
             contactsViewModel: viewModel
@@ -61,6 +67,12 @@ struct NativeContactDetailView: View {
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            guard shouldStartImageSearch else { return }
+            // Consume the request so dismissing a photo sheet does not reopen search.
+            shouldStartImageSearch = false
+            sheetCoordinator.present(.imageSearch)
+        }
         .sheet(item: $sheetCoordinator.activeSheet, onDismiss: {
             sheetCoordinator.handleSheetDismissed()
         }) { sheet in
