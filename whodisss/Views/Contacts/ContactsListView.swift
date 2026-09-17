@@ -1,6 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct ContactsListView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
     @StateObject private var viewModel = ContactsViewModel()
     @State private var showingFilterOptions = false
 
@@ -15,19 +18,35 @@ struct ContactsListView: View {
     var body: some View {
         VStack {
             if !viewModel.hasContactsAccess {
-                ContactsPermissionView(onGrantAccess: requestContactsAccess)
+                ContactsPermissionView(
+                    authorizationStatus: viewModel.authorizationStatus,
+                    onGrantAccess: requestContactsAccess,
+                    onOpenSettings: openAppSettings
+                )
             } else {
                 VStack(spacing: 0) {
                     if viewModel.isLoading {
                         LoadingView("Loading contacts...")
                     } else if viewModel.displayedContacts.isEmpty {
                         let emptyState = viewModel.listEmptyState
-                        EmptyStateView(
-                            icon: emptyState.icon,
-                            title: emptyState.title,
-                            message: emptyState.message,
-                            iconColor: emptyState.iconColor
-                        )
+                        VStack(spacing: 20) {
+                            EmptyStateView(
+                                icon: emptyState.icon,
+                                title: emptyState.title,
+                                message: emptyState.message,
+                                iconColor: emptyState.iconColor
+                            )
+                            .fixedSize(horizontal: false, vertical: true)
+
+                            Button(viewModel.isRefreshing ? "Refreshing..." : "Refresh Contacts") {
+                                Task {
+                                    await viewModel.refreshContacts()
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(viewModel.isRefreshing)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ContactsList(
                             contacts: viewModel.displayedContacts,
@@ -78,8 +97,9 @@ struct ContactsListView: View {
 
             Button("Cancel", role: .cancel) { }
         }
-        .task {
-            await loadContactsIfNeeded()
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await viewModel.synchronizeContactsAccess()
         }
         .errorAlert(for: viewModel)
     }
@@ -90,11 +110,9 @@ struct ContactsListView: View {
         }
     }
 
-    private func loadContactsIfNeeded() async {
-        guard viewModel.hasContactsAccess else { return }
-        guard !viewModel.hasLoadedContacts else { return }
-
-        await viewModel.loadContacts()
+    private func openAppSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(settingsURL)
     }
 }
 

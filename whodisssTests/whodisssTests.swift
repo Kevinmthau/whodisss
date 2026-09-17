@@ -5,6 +5,123 @@ import UIKit
 
 struct whodisssTests {
     @MainActor
+    @Test func nativeContactEdits_updateBothCachesAndSortOrder() async throws {
+        let alice = makeContact(givenName: "Alice", familyName: "Adams")
+        let bob = makeContact(givenName: "Bob", familyName: "Baker")
+        let store = MockContactStore(authorizationStatus: .authorized, contactsSequence: [[alice, bob]])
+        let viewModel = ContactsViewModel(contactStore: store, imageService: MockImageService())
+        await viewModel.loadContacts()
+
+        let edited = try #require(alice.mutableCopy() as? CNMutableContact)
+        edited.givenName = "Zoe"
+        edited.imageData = makeImageData()
+        viewModel.updateCachedContact(edited.copy() as! CNContact)
+
+        #expect(viewModel.contacts.map(\.displayName) == ["Bob Baker", "Zoe Adams"])
+        #expect(viewModel.contactsWithoutImages.map(\.id) == [bob.identifier])
+        #expect(viewModel.contacts.last?.profileImage != nil)
+
+        edited.imageData = nil
+        viewModel.updateCachedContact(edited.copy() as! CNContact)
+
+        #expect(viewModel.contacts.count == 2)
+        #expect(viewModel.contactsWithoutImages.map(\.displayName) == ["Bob Baker", "Zoe Adams"])
+        #expect(viewModel.contacts.last?.hasImage == false)
+        #expect(store.updateCallCount == 0) // The native controller already saved the edit.
+    }
+
+    @MainActor
+    @Test(arguments: [CNAuthorizationStatus.denied, .restricted])
+    func requestContactsAccess_doesNotRepeatAnUnavailablePrompt(status: CNAuthorizationStatus) async {
+        let store = MockContactStore(authorizationStatus: status, contactsSequence: [[makeContact()]])
+        let viewModel = ContactsViewModel(contactStore: store, imageService: MockImageService())
+
+        await viewModel.requestContactsAccess()
+
+        #expect(store.requestCallCount == 0)
+        #expect(store.fetchCallCount == 0)
+        #expect(viewModel.authorizationStatus == status)
+        #expect(!viewModel.hasContactsAccess)
+    }
+
+    @MainActor
+    @Test func requestContactsAccess_loadsNewlyGrantedLimitedContacts() async {
+        let store = MockContactStore(authorizationStatus: .notDetermined, contactsSequence: [[makeContact()]])
+        store.authorizationAfterRequest = .limited
+        let viewModel = ContactsViewModel(contactStore: store, imageService: MockImageService())
+
+        await viewModel.requestContactsAccess()
+
+        #expect(store.requestCallCount == 1)
+        #expect(viewModel.authorizationStatus == .limited)
+        #expect(viewModel.contacts.count == 1)
+        #expect(!viewModel.isLoading)
+    }
+
+    @MainActor
+    @Test func synchronizeContactsAccess_loadsAfterSettingsGrant() async {
+        let store = MockContactStore(authorizationStatus: .denied, contactsSequence: [[makeContact()]])
+        let viewModel = ContactsViewModel(contactStore: store, imageService: MockImageService())
+        await viewModel.synchronizeContactsAccess()
+        #expect(store.fetchCallCount == 0)
+
+        store.authorizationStatus = .limited
+        await viewModel.synchronizeContactsAccess()
+
+        #expect(viewModel.hasContactsAccess)
+        #expect(viewModel.hasLoadedContacts)
+        #expect(viewModel.contactsWithoutImages.count == 1)
+        #expect(store.requestCallCount == 0)
+    }
+
+    @MainActor
+    @Test func synchronizeContactsAccess_refreshesPreviouslyEmptyContacts() async {
+        let newContact = makeContact()
+        let store = MockContactStore(authorizationStatus: .authorized, contactsSequence: [[], [newContact]])
+        let viewModel = ContactsViewModel(contactStore: store, imageService: MockImageService())
+        await viewModel.synchronizeContactsAccess()
+        #expect(viewModel.hasLoadedContacts)
+        #expect(viewModel.contacts.isEmpty)
+
+        await viewModel.synchronizeContactsAccess()
+
+        #expect(viewModel.contacts.map(\.id) == [newContact.identifier])
+        #expect(viewModel.contactsWithoutImages.map(\.id) == [newContact.identifier])
+        #expect(!viewModel.isRefreshing)
+    }
+
+    @MainActor
+    @Test func refreshContacts_reloadsAnEmptyList() async {
+        let store = MockContactStore(authorizationStatus: .authorized, contactsSequence: [[], [makeContact()]])
+        let viewModel = ContactsViewModel(contactStore: store, imageService: MockImageService())
+        await viewModel.loadContacts()
+
+        await viewModel.refreshContacts()
+
+        #expect(viewModel.contacts.count == 1)
+        #expect(viewModel.contactsWithoutImages.count == 1)
+    }
+
+    @MainActor
+    @Test func synchronizeContactsAccess_clearsCachedContactsAfterRevocation() async {
+        let contact = makeContact()
+        let store = MockContactStore(authorizationStatus: .authorized, contactsSequence: [[contact]])
+        let viewModel = ContactsViewModel(contactStore: store, imageService: MockImageService())
+        await viewModel.loadContacts()
+        viewModel.listScrollPositionID = contact.identifier
+
+        store.authorizationStatus = .denied
+        await viewModel.synchronizeContactsAccess()
+
+        #expect(!viewModel.hasContactsAccess)
+        #expect(!viewModel.hasLoadedContacts)
+        #expect(viewModel.contacts.isEmpty)
+        #expect(viewModel.contactsWithoutImages.isEmpty)
+        #expect(viewModel.listScrollPositionID == nil)
+        #expect(store.fetchCallCount == 1)
+    }
+
+    @MainActor
     @Test func loadContacts_acceptsLimitedAuthorization() async throws {
         let store = MockContactStore(
             authorizationStatus: .limited,
@@ -396,7 +513,10 @@ struct whodisssTests {
 
 private final class MockContactStore: ContactStoreProtocol {
     var authorizationStatus: CNAuthorizationStatus
+    var authorizationAfterRequest: CNAuthorizationStatus?
     private var contactsSequence: [[CNContact]]
+    private(set) var requestCallCount = 0
+    private(set) var fetchCallCount = 0
     private(set) var updateCallCount = 0
     private(set) var deleteCallCount = 0
 
@@ -406,10 +526,15 @@ private final class MockContactStore: ContactStoreProtocol {
     }
 
     func requestAccess() async throws -> Bool {
-        authorizationStatus == .authorized || authorizationStatus == .limited
+        requestCallCount += 1
+        if let authorizationAfterRequest {
+            authorizationStatus = authorizationAfterRequest
+        }
+        return authorizationStatus == .authorized || authorizationStatus == .limited
     }
 
     func fetchContacts() async throws -> [CNContact] {
+        fetchCallCount += 1
         if contactsSequence.count > 1 {
             return contactsSequence.removeFirst()
         }

@@ -26,6 +26,7 @@ struct NativeContactDetailView: View {
                 contact: contactInfo.contact,
                 onBack: { dismiss() },
                 onContactUpdated: { updatedContact in
+                    viewModel.updateCachedContact(updatedContact)
                     contactInfo = ContactInfo(
                         contact: updatedContact,
                         hasImage: ContactInfo.hasImage(for: updatedContact)

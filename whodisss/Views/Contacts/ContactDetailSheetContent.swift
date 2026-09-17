@@ -33,13 +33,15 @@ struct ContactDetailSheetContent: View {
             )
         case .photoEditor:
             if let image = detailViewModel.selectedImage {
-                PhotoEditorView(originalImage: image) { editedImage in
-                    Task {
-                        if await detailViewModel.saveEditedImage(editedImage, for: contactInfo.contact) {
-                            sheetCoordinator.dismiss()
-                            onPhotoSaved()
-                        }
+                PhotoEditorView(
+                    originalImage: image,
+                    saveErrorMessage: { detailViewModel.errorMessage }
+                ) { editedImage in
+                    if await detailViewModel.saveEditedImage(editedImage, for: contactInfo.contact) {
+                        onPhotoSaved()
+                        return true
                     }
+                    return false
                 }
             }
         }

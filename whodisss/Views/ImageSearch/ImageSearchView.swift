@@ -27,6 +27,7 @@ struct ImageSearchView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
+                        viewModel.cancelImageSelection()
                         dismiss()
                     }
                 }
@@ -37,6 +38,9 @@ struct ImageSearchView: View {
                 onImageSelected(image)
                 dismiss()
             }
+        }
+        .onDisappear {
+            viewModel.cancelImageSelection()
         }
         .errorAlert(for: viewModel)
     }

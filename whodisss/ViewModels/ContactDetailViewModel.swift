@@ -45,8 +45,11 @@ class ContactDetailViewModel: ObservableObject, ErrorHandling {
     }
 
     func saveEditedImage(_ editedImage: UIImage, for contact: CNContact) async -> Bool {
+        guard !isSaving else { return false }
+
         isSaving = true
         defer { isSaving = false }
+        clearError()
 
         let success = await contactsViewModel.saveImageToContact(
             contact,
@@ -55,6 +58,10 @@ class ContactDetailViewModel: ObservableObject, ErrorHandling {
 
         if success {
             selectedImage = nil
+        } else {
+            // The editor owns this alert so the crop stays available for retry.
+            errorMessage = contactsViewModel.errorMessage ?? "Failed to save contact image"
+            contactsViewModel.clearError()
         }
 
         return success

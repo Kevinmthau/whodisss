@@ -34,9 +34,19 @@ struct GoogleImageSearchWebView: UIViewRepresentable {
         )
     }
 
-    private static func searchURL(for query: String) -> URL? {
-        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        return URL(string: "https://www.google.com/search?tbm=isch&q=\(encoded)")
+    static func searchURL(for query: String) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "www.google.com"
+        components.path = "/search"
+        components.queryItems = [
+            URLQueryItem(name: "tbm", value: "isch"),
+            URLQueryItem(name: "q", value: query)
+        ]
+        // Google decodes literal plus signs as spaces in query parameters.
+        components.percentEncodedQuery = components.percentEncodedQuery?
+            .replacingOccurrences(of: "+", with: "%2B")
+        return components.url
     }
 
     class Coordinator {

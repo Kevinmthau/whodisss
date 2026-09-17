@@ -17,6 +17,8 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
 
     private let contactStore: ContactStoreProtocol
     private let imageService: ImageServiceProtocol
+    private var isFetchingContacts = false
+    private var isRequestingContactsAccess = false
 
     init(
         contactStore: ContactStoreProtocol = ContactStore(),
@@ -55,14 +57,20 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
     }
 
     func requestContactsAccess() async {
-        isLoading = true
-        defer { isLoading = false }
+        updateAuthorizationStatus()
+        guard authorizationStatus == .notDetermined else {
+            await synchronizeContactsAccess()
+            return
+        }
+        guard !isRequestingContactsAccess else { return }
+        isRequestingContactsAccess = true
+        defer { isRequestingContactsAccess = false }
 
         do {
-            let granted = try await contactStore.requestAccess()
-            authorizationStatus = contactStore.authorizationStatus
+            _ = try await contactStore.requestAccess()
+            updateAuthorizationStatus()
 
-            if granted {
+            if hasContactsAccess {
                 await loadContacts()
             }
         } catch {
@@ -70,14 +78,43 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
         }
     }
 
-    func loadContacts() async {
+    /// Recheck Settings changes and reload even when the previous result was empty.
+    func synchronizeContactsAccess() async {
+        updateAuthorizationStatus()
         guard hasContactsAccess else { return }
 
+        if hasLoadedContacts {
+            await refreshContacts()
+        } else {
+            await loadContacts()
+        }
+    }
+
+    private func updateAuthorizationStatus() {
+        authorizationStatus = contactStore.authorizationStatus
+        if !hasContactsAccess {
+            contacts = []
+            contactsWithoutImages = []
+            listScrollPositionID = nil
+            hasLoadedContacts = false
+        }
+    }
+
+    func loadContacts() async {
+        updateAuthorizationStatus()
+        guard hasContactsAccess, !isFetchingContacts else { return }
+
+        isFetchingContacts = true
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            isFetchingContacts = false
+            isLoading = false
+        }
 
         do {
             let fetchedContacts = try await fetchContactsInBackground()
+            updateAuthorizationStatus()
+            guard hasContactsAccess else { return }
             processContacts(fetchedContacts)
         } catch {
             handleError(error, message: "Failed to load contacts")
@@ -100,7 +137,7 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
         hasLoadedContacts = true
     }
 
-    private func updateCachedContact(_ contact: CNContact) {
+    func updateCachedContact(_ contact: CNContact) {
         let updated = ContactInfo(contact: contact, hasImage: ContactInfo.hasImage(for: contact))
 
         contacts.upsertByID(updated)
@@ -212,14 +249,20 @@ class ContactsViewModel: ObservableObject, ErrorHandling {
     }
 
     func refreshContacts() async {
-        guard hasContactsAccess else { return }
-        guard !isRefreshing else { return }
+        updateAuthorizationStatus()
+        guard hasContactsAccess, !isFetchingContacts else { return }
 
+        isFetchingContacts = true
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            isFetchingContacts = false
+            isRefreshing = false
+        }
 
         do {
             let fetchedContacts = try await fetchContactsInBackground()
+            updateAuthorizationStatus()
+            guard hasContactsAccess else { return }
             processContacts(fetchedContacts)
         } catch {
             handleError(error, message: "Failed to refresh contacts")

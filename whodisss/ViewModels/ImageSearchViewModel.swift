@@ -10,6 +10,8 @@ class ImageSearchViewModel: NSObject, ObservableObject, ErrorHandling {
 
     private let imageService: ImageServiceProtocol
     private var onImageSelected: ((UIImage) -> Void)?
+    private var downloadTask: Task<Void, Never>?
+    private var selectionID: UUID?
 
     init(imageService: ImageServiceProtocol = ImageService()) {
         self.imageService = imageService
@@ -17,26 +19,53 @@ class ImageSearchViewModel: NSObject, ObservableObject, ErrorHandling {
     }
 
     func setImageHandler(_ handler: @escaping (UIImage) -> Void) {
+        cancelImageSelection()
         self.onImageSelected = handler
     }
 
-    func handleImageSelection(from urlString: String) {
+    func cancelImageSelection() {
+        selectionID = nil
+        downloadTask?.cancel()
+        downloadTask = nil
+        onImageSelected = nil
+    }
+
+    @discardableResult
+    func handleImageSelection(from urlString: String) -> Task<Void, Never>? {
+        guard onImageSelected != nil else { return nil }
         guard let url = URL(string: urlString) else {
             showErrorMessage("Invalid image URL")
-            return
+            return nil
         }
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
-            return
+            return nil
         }
 
-        Task {
+        downloadTask?.cancel()
+        let selectionID = UUID()
+        self.selectionID = selectionID
+        let imageService = self.imageService
+
+        let task = Task { [weak self] in
             do {
                 let image = try await imageService.downloadImage(from: url)
-                onImageSelected?(image)
+                guard !Task.isCancelled, let self, self.selectionID == selectionID else { return }
+
+                // Finish the search session before the callback starts the sheet transition.
+                let handler = self.onImageSelected
+                self.onImageSelected = nil
+                self.selectionID = nil
+                self.downloadTask = nil
+                handler?(image)
             } catch {
-                handleError(error, message: "Failed to download image")
+                guard !Task.isCancelled, let self, self.selectionID == selectionID else { return }
+                self.selectionID = nil
+                self.downloadTask = nil
+                self.handleError(error, message: "Failed to download image")
             }
         }
+        downloadTask = task
+        return task
     }
 }
 

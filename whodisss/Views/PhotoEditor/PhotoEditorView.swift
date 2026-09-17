@@ -3,7 +3,8 @@ import UIKit
 
 struct PhotoEditorView: View {
     let originalImage: UIImage
-    let onSave: (UIImage) -> Void
+    let onSave: @MainActor (UIImage) async -> Bool
+    let saveErrorMessage: @MainActor () -> String?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: PhotoEditorViewModel
@@ -11,10 +12,12 @@ struct PhotoEditorView: View {
     init(
         originalImage: UIImage,
         imageService: ImageServiceProtocol = ImageService(),
-        onSave: @escaping (UIImage) -> Void
+        saveErrorMessage: @escaping @MainActor () -> String? = { nil },
+        onSave: @escaping @MainActor (UIImage) async -> Bool
     ) {
         self.originalImage = originalImage
         self.onSave = onSave
+        self.saveErrorMessage = saveErrorMessage
         self._viewModel = StateObject(wrappedValue: PhotoEditorViewModel(
             originalImage: originalImage,
             imageService: imageService
@@ -32,23 +35,27 @@ struct PhotoEditorView: View {
                     offset: $viewModel.offset
                 )
                 .padding()
+                .allowsHitTesting(!viewModel.isSaving)
 
                 Spacer()
 
                 PhotoEditorActions(
+                    isSaving: viewModel.isSaving,
                     onCancel: { dismiss() },
                     onSave: saveCroppedImage
                 )
             }
             .padding()
             .navigationBarHidden(true)
+            .disabled(viewModel.isSaving)
         }
+        .interactiveDismissDisabled(viewModel.isSaving)
+        .errorAlert(for: viewModel)
     }
 
     private func saveCroppedImage() {
         Task {
-            if let croppedImage = await viewModel.cropImage() {
-                onSave(croppedImage)
+            if await viewModel.saveImage(onSave: onSave, failureMessage: saveErrorMessage) {
                 dismiss()
             }
         }
@@ -56,5 +63,5 @@ struct PhotoEditorView: View {
 }
 
 #Preview {
-    PhotoEditorView(originalImage: UIImage(systemName: "person.fill") ?? UIImage()) { _ in }
+    PhotoEditorView(originalImage: UIImage(systemName: "person.fill") ?? UIImage()) { _ in true }
 }

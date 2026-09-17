@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PhotoEditorActions: View {
+    let isSaving: Bool
     let onCancel: () -> Void
     let onSave: () -> Void
 
@@ -10,7 +11,7 @@ struct PhotoEditorActions: View {
                 .buttonStyle(.bordered)
                 .foregroundColor(.red)
 
-            Button("Save Photo", action: onSave)
+            Button(isSaving ? "Saving..." : "Save Photo", action: onSave)
                 .buttonStyle(.borderedProminent)
         }
     }
